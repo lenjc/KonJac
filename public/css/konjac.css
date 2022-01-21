@@ -1,0 +1,625 @@
+@charset "utf-8";
+#konjac {
+    background-color: #424242;
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    z-index: 999999;
+    overflow: hidden;
+    font-family: 微软雅黑, Microsoft YaHei, sans-serif;
+    font-weight: normal;
+    font-size: medium;
+    user-select: none;
+
+}
+
+
+#konjacHeader {
+    height: 35px;
+    width: 100%;
+    top: 0;
+    position: relative;
+    position: -webkit-sticky;
+    display: flex;
+    justify-content: flex-end;
+    z-index: 9998;
+    background-color: #212121;
+
+}
+#konjacFotter{
+    height: 35px;
+    width: 100%;
+    background-color: #212121;
+}
+
+#konjacCurrentPage{
+    color: #fff;
+    width: auto;
+    height: 100%;
+    display: flex;
+    flex-direction: row;    
+    line-height: 35px;
+}
+
+#konjacCurrentPage > span{
+    padding: 0 5px;
+}
+
+#konjacExit {
+    cursor: pointer;
+    width: auto;
+    height: 100%;
+    width: 80px;
+    position: absolute;
+    right: 0px;
+    color: #444;
+    background-color: #fff;
+    line-height: 35px;
+    text-align: center;
+}
+
+#konjacContent {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    /* padding-right: 27px; */   
+    /* top: 35px;  */
+    left: 0px;
+    width: 100%;    
+    height:calc(100% - 70px);
+    /* justify-content: center; */
+    /* overflow: auto; */
+}
+
+#konjacContainer {
+    position: relative;
+    width: 100% ;
+    /* width: calc(100% - 280px); */
+    overflow: auto;   
+}
+#konjacTitle{
+    padding: 5px;
+    background-color: #fff;
+    margin-bottom: 10px;
+    color: #546E7A;
+}
+
+#konjacTitle > div:nth-child(1){
+    font-size: 26px;
+    font-weight: bold;
+    color: #37474F;
+    display: -webkit-box;    
+    -webkit-box-orient: vertical;    
+    -webkit-line-clamp: 2;    
+    overflow: hidden;
+}
+
+#konjacTitle > div:nth-child(2){   
+    display: -webkit-box;    
+    -webkit-box-orient: vertical;    
+    -webkit-line-clamp: 1;    
+    overflow: hidden;
+}
+
+.konjacColumn{
+    margin:0 5px 0px 5px;
+    padding-bottom: 5px;
+    width:calc(100% - 10px) ;
+    font-weight: bold;
+    border-bottom: 1px solid #B0BEC5;
+}
+
+.konjacTurnPage{
+    height: 35px;
+    color: #fff;
+    margin: 0 5px;
+    display: flex;
+    align-items: center;
+    opacity:1;
+    cursor: pointer;
+}
+
+.konjacAbsoluteCenter{
+    position: absolute;
+    left:calc(50% - 285px / 2) ;
+    height: 100%;
+    transform: translateX(-50%);
+    color: #fff;
+    line-height: 35px;
+}
+
+.konjacAbsoluteCenterFix{
+    left:calc(50% - 35px / 2) ;
+}
+
+
+
+
+
+.konjacConfigParams{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-bottom: 10px;
+    color: #546E7A;
+}
+
+
+#konjacZoom{
+    width: 50px;
+    outline: none;
+    border: none;
+    color:#37474F ;
+    font-size: 18px;
+    height: 40px;
+    background: transparent;
+}
+
+#konjacZoom::-webkit-inner-spin-button {
+    height: 36px;
+}
+
+.konjacConfigMode-scroll{
+    display: flex;
+    flex-direction: column;
+    /* margin:auto auto; */
+    /* align-items: safe center; */
+    /* flex-wrap:wrap ; */
+}
+
+.konjacConfigMode-scroll > .konjacPage{
+    margin: auto;
+}
+
+
+.konjacConfigMode-page{
+    display: flex;
+    flex-direction: row-reverse;
+    /* align-items: center;
+    justify-content: center; */
+    /* height: 100%; */
+}
+
+.konjacConfigMode-page > .konjacPage{
+    margin: auto 0;
+}
+
+.konjacPageTurn{
+    margin: auto;
+    display: flex;
+    flex-direction: row-reverse;
+}
+.konjacConfigSeleted{
+    background-color: #e8ecf1;
+    color: #37474F;
+}
+
+#konjacSider {
+    z-index: 9998;
+    width: 250px;
+    min-width: 250px;
+    background-color: #ececec;
+    position: relative;
+    /* position: absolute; */
+    height: 100%;
+    /* top: 0px; */
+    color: #37474F;
+    right: 0px;    
+    overflow-y: auto;
+}
+
+#konjacFold {
+    position: relative;
+    cursor: pointer;
+    right: 0px;
+    width: 30px;
+    min-width: 30px;
+    height: 100%;
+    display: flex;
+    background-color: #e8ecf1;
+    align-items: center;
+    justify-content: center;
+}
+
+.konjacFold>svg {
+    transform: rotateY(180deg);
+}
+
+#konjacSearch {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    height: 30px;
+    margin: 5px 5px 0 5px;
+    border: 1px solid #B0BEC5;
+    border-radius: 5px;
+    overflow: hidden;
+    width: calc(100% - 10px);
+}
+
+#konjacSearch>select {
+    width: 50px;
+    border: 0;
+    color: #37474F;
+    border-radius: 0;
+    outline: none;
+    font-family: 微软雅黑, Microsoft YaHei, sans-serif;
+}
+
+#konjacLang  option:hover{
+background-color: chartreuse;
+}
+
+#konjacSearch>input {
+    width: 100%;
+    outline: none;
+    border: 0;
+    font-family: 微软雅黑, Microsoft YaHei, sans-serif;
+    border-radius: 0;
+    color: #37474F;
+}
+
+#konjacSearch>button {
+    width: 60px;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    font-family: 微软雅黑, Microsoft YaHei, sans-serif;
+    cursor: pointer;
+    color: #37474F;
+    background-color: #e8ecf1;
+}
+
+#konjacSearch>button:active {
+    background-color: khaki;
+}
+
+
+.konjacSiderItem {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    margin-top: 35px;
+    min-height: 50px;
+}
+
+.konjacSiderSpan {
+    position: absolute;
+    height: 30px;
+    margin-left: 5px;
+    top: -30px;
+    line-height: 30px;
+    user-select: none;
+}
+
+.konjacSource {
+    position: relative;
+    height: 50px;
+    width: calc(100% - 10px);
+    margin: 0 5px;
+    white-space: nowrap;
+    display: block;
+    background-color: #fff;
+    overflow: hidden;
+    word-break: break-all;
+    text-overflow: ellipsis;
+    user-select: none;
+    border: 1px solid #dbdbdb;
+    border-radius: 5px;
+    padding: 3px 0 3px 0;
+}
+
+.konjacButton{
+    cursor: pointer;
+}
+
+.konjacSource .konjacButton {
+    position: absolute;
+    left: 0;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+   
+}
+
+.konjacSource> :nth-child(2) {
+    position: absolute;
+    text-align: left;
+    width: calc(100% - 50px);
+    left: 50px;
+}
+
+.konjacSource> :nth-child(2)>div {
+    height: 25px;
+    line-height: 25px;
+    left: 0;
+    /* width: 60px; */
+    overflow: hidden;
+    white-space: nowrap;
+    word-break: break-all;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+
+.konjacSource svg {
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    margin: auto auto;
+}
+
+.konjacLoad {
+    height: auto;
+    margin:0 5px 10px 5px;
+    background-color: #fff;
+    width: calc(100% - 18px);
+    padding: 3px 3px 3px 5px;
+    border: 1px solid #dbdbdb;
+    border-radius: 5px;
+}
+.konjacLoad a{
+    cursor: pointer;
+    color: #37474F;
+}
+
+.konjacLoad a:hover{
+    color: #1e8bc3;
+    text-decoration:underline;
+}
+
+.konjacLoad:nth-of-type(2) {
+    border-top: 1px solid #dbdbdb;
+}
+
+.konjacLoad> :nth-child(1)>div {
+    height: 30px;
+    line-height: 30px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    align-items: center;
+    user-select: none;
+    font-size: medium;
+}
+
+.konjacLoad> :nth-child(2) {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.konjacLoad>:nth-child(2)>div {
+    width: 100%;
+    height: 30px;
+    display: flex;
+}
+
+.konjacLoad svg {
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    margin: auto auto;
+}
+
+.konjacLoad input {
+    width: 30px;
+    line-height: 30px;
+    text-align: center;
+    border: 0;
+    padding: 0;
+    font-size: 24px;
+    width: 100%;
+    outline: none;
+    color: #37474F;
+    font-weight: bold;
+    font-family: sans-serif;
+    background-color: transparent;
+}
+
+.konjacLoad input::-webkit-inner-spin-button {
+    height: 30px;
+}
+
+.konjacPage {
+    position: relative;
+    display: inline-block;
+    /* margin-bottom: 10px; */
+    /* margin: auto; */
+}
+
+
+#konjacConfig{
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    background-color: #fff;
+    padding-top: 10px ;
+}
+#konjacTranslation{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 10px;
+    background-color: #fff;
+    padding-top: 10px ;
+}
+
+#konjacConfig > div{
+    height: 45px;
+    text-align: center;   
+    line-height: 45px;
+}
+.konjacConfigParamsHalf{
+    cursor: pointer;
+    height: 45px;
+    line-height: 45px;
+    width: 50%;
+    margin: 0 10px;
+    border-radius: 15px;
+    text-align: center;    
+    border-color: #fff;
+}
+#konjacConfigMode-size{
+    display: flex;
+    flex-direction: row;
+    width: 50%;
+}
+
+.konjacConfigMode-size{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    width: 25px;
+    color: #37474F;
+    fill: #37474F;
+    height: 100%;
+    line-height: 22px;
+    font-size: 16px;
+}
+.konjacContainer {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
+
+.konjacItemContainer {
+    position: absolute;
+    user-select: none;
+    overflow: visible;
+}
+
+.konjacItemBackground {
+    -webkit-text-stroke-color: rgba(255, 255, 255, 1);
+    -webkit-text-stroke-width: 4px;
+    position: absolute;
+    font-size: 18px;
+    padding: 5px;
+    width: 100%;
+    height: 100%;
+    color: rgba(0, 0, 0, 1);
+    writing-mode: horizontal-tb;
+    font-family: "Microsoft YaHei", sans-serif;
+    text-align: left;
+    line-height: 1.5;
+    letter-spacing: 2;
+    white-space: normal;
+    word-break: break-all;
+    font-weight: normal;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased
+}
+
+.konjacItemStyle {
+    position: absolute;
+    font-size: 18px;
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    color: rgba(0, 0, 0, 1);
+    writing-mode: horizontal-tb;
+    font-family: Microsoft YaHei, 微软雅黑, sans-serif;
+    font-weight: normal;
+    text-align: left;
+    font-style: normal;
+    line-height: 1.5;
+    letter-spacing: 2;
+    white-space: normal;
+    word-break: break-all;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased
+}
+
+.konjacItemStyle * {
+    azimuth: inherit;
+    border-collapse: inherit;
+    border-spacing: inherit;
+    caption-side: inherit;
+    color: inherit;
+    cursor: inherit;
+    direction: inherit;
+    empty-cells: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-style: inherit;
+    font-variant: inherit;
+    font-weight: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    list-style-image: inherit;
+    list-style-position: inherit;
+    list-style-type: inherit;
+    list-style: inherit;
+    orphans: inherit;
+    quotes: inherit;
+    text-align: inherit;
+    text-indent: inherit;
+    visibility: inherit;
+    widows: inherit;
+    word-spacing: inherit;
+}
+
+.konjacItemClip {
+    position: absolute;
+    width: auto;
+    height: auto;
+}
+
+.konjacItemSVG {
+    position: absolute;
+}
+
+#konjacLoadEmpty,
+#konjacSourceEmpty {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    color: #B0BEC5;
+    padding: 10px 0;
+}
+
+#konjacMessage{
+    width: 820px;
+    height: 1200px;
+    min-width:820px ;
+    min-height: 1200px;
+    background-color: #fff;
+}
+
+#konjacEND{
+    width: 100%;
+    height: 30%;
+    display: flex;    
+    justify-content: center;
+    align-items: center;
+    font-size: 68px;
+    letter-spacing: 10px;
+    font-weight: bold;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.6);
+}
+
+
+.konjacMessage{        
+    padding:5px 10px 5px 10px;
+    margin-top: 10px;  
+    position: relative;    
+    display: flex;
+    flex-direction: row;    
+}
+
+.konjacMessage>div:nth-child(1){
+    width:auto;
+    text-align: right;
+}
+.konjacBubbleTail{
+    position: relative;
+    margin-left: 18px;
+    background-color:#e8ecf1 ;
+    padding: 3px 10px;
+    border-radius: 3px;
+    min-height: 60px;
+}
+.konjacBubbleTail:before{content:'';position:absolute;right:100%;top:5px;width:0;height:0;border-width:10px;border-style:solid;border-color:transparent;border-right-width:15px;border-right-color:currentColor;color:#e8ecf1;}
