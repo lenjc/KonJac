@@ -154,7 +154,7 @@ async function htmlGenerator(code, data) {
             })
             break
         case 'initSource':
-            if(!data.data.length){
+            if (!data.data.length) {
                 konjacNotification('无可用译文');
                 return
             }
@@ -342,8 +342,9 @@ async function readingMode(data) {
             try {
                 await ready()
                 if (!this.data) {
-                    konjacNotification('正在准备中···',0)
-                    this.data = await getData() }
+                    konjacNotification('正在准备中···', 0)
+                    this.data = await getData()
+                }
                 if (!$('#konjac').length) {
                     callbackground({ type: 'tab-insertCSS', });
                     initReading()
@@ -358,8 +359,10 @@ async function readingMode(data) {
                     if (waitTime > 60) { clearInterval(waitForReady) }
                     ready().then(async () => {
                         clearInterval(waitForReady)
-                        if (!this.data) {konjacNotification('正在准备中···',0);
-                        this.data = await getData() }
+                        if (!this.data) {
+                            konjacNotification('正在准备中···', 0);
+                            this.data = await getData()
+                        }
                         if (!$('#konjac').length) {
                             callbackground({
                                 type: 'tab-insertCSS',
@@ -374,7 +377,7 @@ async function readingMode(data) {
             }
         } else {
             if (!this.data) {
-                konjacNotification('正在准备中···',0);
+                konjacNotification('正在准备中···', 0);
                 this.data = await getData()
             }
             if (!$('#konjac').length) {
@@ -394,7 +397,7 @@ async function readingMode(data) {
 
 async function initReading() {
     let config = await callbackground({ type: 'storage-get', key: 'konjac-config' })
-    this.config = config ? config['konjac-config'] : { mode: 'scroll', page: 2, index: 0, turn: 'left' }
+    this.config = config ? config['konjac-config'] ? config['konjac-config'] : { mode: 'scroll', page: 2, index: 0, turn: 'left' } : { mode: 'scroll', page: 2, index: 0, turn: 'left' }
     $('body').attr({ style: 'overflow:hidden' })
     $('body').prepend(`
 	<div id='konjac' >    
@@ -628,7 +631,7 @@ async function initReading() {
             $('.konjacSource .konjacButton').eq(0).click()
         }
     }
-    
+
 }
 
 let pageTurnByMousewheel = (e) => {
