@@ -621,6 +621,7 @@ async function initReading() {
             },
         }
     });
+    console.log('res',res)
     $('#konjacNotification').hide('fast')
 
     await htmlGenerator('initSource', res.result)

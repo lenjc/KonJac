@@ -68,7 +68,7 @@ async function notifications(params) {
 
 
 
-var baseUrl = 'http://localhost:4000'
+var baseUrl = 'http://api.konjac.fun'
 const api = {
     translation: () => baseUrl + '/public/translation',
     script: () => baseUrl + '/public/script',
@@ -152,8 +152,7 @@ async function getCode(url) {
     try {
         let list = await getlocal('srcipt_list')
         let host = url.split('/')[2]
-        list = JSON.parse(list)
-        list = list ? list : []
+        list = list ? JSON.parse(list) : []
         let match = list.find(ele => {
             let reg = new RegExp(ele.match);
             return ele.host.includes(host) && reg.test(url)
