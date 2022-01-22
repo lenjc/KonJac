@@ -194,7 +194,7 @@ async function loadTranslation(element, skip) {
             switch (item.type) {
                 case 'text':
                     $('.konjacContainer').eq(index).append(
-                        `<div data-id='${element.translation_id}' id='konjacItem-${item.uid}' class='konjacItemContainer' style='${obj2css(item.container)};${item.customContainer};top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom}!important;' >
+                        `<div data-id='${element.translation_id}' id='konjacItem-${item.uid}' class='konjacItemContainer' style='${obj2css(item.container)};${item.customContainer};top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom}!important;z-index:${b+1}' >
                   <div class='konjacItemBackground' style='${obj2css(item.style, item.background)};${item.customBackground}!important;' >${item.body}</div>
                         <div class='konjacItemStyle' style='${obj2css(item.style)}${item.customStyle}!important;'>${item.body}</div>
                     <div>`
@@ -203,7 +203,7 @@ async function loadTranslation(element, skip) {
                 case 'clip':
                     createClip(img, item, zoom).then(clip => {
                         $('.konjacContainer').eq(index).append(
-                            `<img data-id='${element.translation_id}' id='konjacItem-${item.uid}'  class='konjacItemClip'  style='top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom}' src='${item.src}' />`
+                            `<img data-id='${element.translation_id}' id='konjacItem-${item.uid}'  class='konjacItemClip'  style='top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom};z-index:${b+1}' src='${item.src}' />`
                         )
                         body.forEach(ele => {
                             ele.item.forEach(items => {
@@ -223,7 +223,7 @@ async function loadTranslation(element, skip) {
                     break
                 case 'svg':
                     $('.konjacContainer').eq(index).append(`
-                    <svg xmlns="http://www.w3.org/2000/svg" data-id='${element.translation_id}' id='konjacItem-${item.uid}' class='konjacItemSVG' style="${obj2css(item.style)};top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom}">
+                    <svg xmlns="http://www.w3.org/2000/svg" data-id='${element.translation_id}' id='konjacItem-${item.uid}' class='konjacItemSVG' style="${obj2css(item.style)};top:${item.top * zoom}px;left:${item.left * zoom}px;zoom:${zoom};z-index:${b+1}">
                     <g transform="translate(${-item.translate.x},${-item.translate.y})">${item.body}</g></svg>`)
                     if (item.attributes) {
                         for (const key in item.attributes) {

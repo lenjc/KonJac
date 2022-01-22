@@ -560,7 +560,9 @@ export default {
     autoSave(open = true) {
       if (open) {
         clearInterval(this.autosave)
-        this.autosave = setInterval(() => { this.saveBody() }, 10 * 60 * 1000)
+        this.autosave = setInterval(() => {
+          console.log('autoSave   ',new Date)
+          this.saveBody() }, 10 * 60 * 1000)
       } else {
         clearInterval(this.autosave)
       }
@@ -605,6 +607,7 @@ export default {
       await chromeApi.savelocal({ 'translation': JSON.stringify(translationList) })
       await chromeApi.savelocal({ [`translation-${item.local_id}`]: JSON.stringify(item) })
       this.saved = false
+      console.log('save   ',new Date)
       this.$message.success('保存成功')
     },
     async loadTranslation(request) {
