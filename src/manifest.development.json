@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "KonJac",
-    "description": "译文加载器 - 译者版",
+    "description": "译文加载器",
     "version": "0.1",
     "background": {
         "page": "background.html",

@@ -20,6 +20,10 @@
         保存
         <a-icon type="loading" v-show="saved" />
       </div>
+      <div class="konjac_menu" @click="$refs.setting.showModal()">
+
+        设置
+      </div>
     </div>
     <div id="layout-workspace">
       <div class="workspace-sider-left  scrollbar2">
@@ -92,15 +96,6 @@
                 <div>
                   <a-icon type="eye" v-show="item.show" @click="item.show=!item.show" />
                   <a-icon type="eye-invisible" v-show="!item.show" @click="item.show=!item.show" />
-                  <!-- <a-dropdown placement="bottomRight" overlayClassName="dropdown-item">
-                    <a-icon type="down" style="cursor: pointer;" />
-                    </a>
-                    <a-menu slot="overlay">
-                      <a-menu-item key="0">
-                        <a @click="deleteItem(pageindex,itemIndex)">删除</a>
-                      </a-menu-item>
-                    </a-menu>
-                  </a-dropdown> -->
                 </div>
               </div>
             </transition-group>
@@ -239,6 +234,7 @@
       <a-input v-model="title.presetStyleTitle" placeholder="请输入"></a-input>
     </a-modal>
     <editITem ref='editITem' @paramChange="setData" />
+    <setting ref='setting' :setting="setting" @triggetMethod="triggetMethod" />
   </div>
 </template>
 
@@ -259,11 +255,13 @@ import svgItemMenu from './svg/svgItemMenu.vue'
 import tips from './components/basetoolTip.vue'
 import baseinfo from './components/baseinfo.vue'
 import editITem from './components/editITem.vue'
+import setting from './components/setting.vue'
 
 import vuedraggable from 'vuedraggable';
 import domtoimage from 'dom-to-image';
 import { saveAs } from 'file-saver';
 import * as JSZip from 'jszip';
+
 
 import chromeApi from '../../module/chrome'
 
@@ -287,7 +285,7 @@ const default_konjac_css = {
     'font-family': "Microsoft YaHei, 微软雅黑, sans-serif",
     'letter-spacing': 'normal',
     'white-space': 'normal',
-    'word-break': 'break-all',    
+    'word-break': 'break-all',
   },
 
   'background': {
@@ -405,10 +403,14 @@ export default {
     tips: tips,
     baseinfo: baseinfo,
     editITem,
+    setting
   },
   data() {
     this.tool = tool
     return {
+      setting: {
+
+      },
       saved: false,
       visible: {
         presetStyleTitle: false,
@@ -440,6 +442,7 @@ export default {
       filePage: 0,
       customClip: {},
       presetStyle: [],
+      autosave:null,
       copyItem: null,
       defaultStyle: {},
       selectedTextStyle: null,
@@ -513,6 +516,7 @@ export default {
     this.init()
     this.dataReset('customClip')
     this.dataReset('svgData')
+    this.getSetting()
     // this.loadImageSource({
     //   pages: [{
     //     src: "https://img0.baidu.com/it/u=4177142990,590745591&fm=26&fmt=auto",
@@ -539,15 +543,34 @@ export default {
     data: {
       handler(val, old) { document.title = 'KonJac - ' + val.title },
       deep: true,
+    },
+    setting: {
+      handler(val, old) {
+        chromeApi.savelocal({ 'editor-config': val })
+      },
+      deep: true,
     }
   },
   methods: {
+    async getSetting() {
+      let config = await chromeApi.getlocal('editor-config')
+      this.setting = config ? config : { autoSave: true }
+      this.autoSave(this.setting.autoSave)
+    },
+    autoSave(open = true) {
+      if (open) {
+        clearInterval(this.autosave)
+        this.autosave = setInterval(() => { this.saveBody() }, 5 * 1000)         
+      } else {
+        clearInterval(this.autosave)
+      }
+    },
     getTranslation(data = {}) {
       let filterBody = data.body.filter((ele, index) => {
         ele.index = index
         return ele.item.length
       })
-      if(!filterBody.length){
+      if (!filterBody.length) {
         return false
       }
       data.defaultRule = {
@@ -560,7 +583,7 @@ export default {
     async saveBody() {
       if (!this.validateInfo()) { this.$message.warning('译文标题必须在6字节以上'); return }
       let item = this.getTranslation(this.data)
-      if(!item){this.$message.warning('译文无内容'); return      }
+      if (!item) { this.$message.warning('译文无内容'); return }
       let ts = await chromeApi.getlocal(`translation-${this.data.local_id}`)
       let { createTime, saveTime, ...res } = ts ? JSON.parse(ts) : {}
       if (JSON.stringify(item) == JSON.stringify(res)) { this.$message.info('文档未修改'); return }
@@ -660,6 +683,7 @@ export default {
     setPresetStyle(val) {
       let item = this.presetStyle.find(ele => ele.id == val)
       if (!item) { return }
+      item = JSON.parse(JSON.stringify(item))
       this.$set(this.selectedTextStyle, 'style', item.style.style)
       this.$set(this.selectedTextStyle, 'container', item.style.container)
       this.$set(this.selectedTextStyle, 'background', item.style.background)
@@ -705,6 +729,7 @@ export default {
               item.top = this.selectedItem.top + 50
               item.left = this.selectedItem.left + 50
               this.data.body[this.selectIndex.page].item.push(item)
+              this.copyItem = null
             }
             break
         }
@@ -1679,7 +1704,7 @@ export default {
         }
         if (ele.min && len < ele.min) {
           ok = false
-        } 
+        }
       })
       return ok
     },
