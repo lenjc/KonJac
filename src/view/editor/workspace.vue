@@ -442,7 +442,7 @@ export default {
       filePage: 0,
       customClip: {},
       presetStyle: [],
-      autosave:null,
+      autosave: null,
       copyItem: null,
       defaultStyle: {},
       selectedTextStyle: null,
@@ -560,7 +560,7 @@ export default {
     autoSave(open = true) {
       if (open) {
         clearInterval(this.autosave)
-        this.autosave = setInterval(() => { this.saveBody() }, 5 * 1000)         
+        this.autosave = setInterval(() => { this.saveBody() }, 10 * 60 * 1000)
       } else {
         clearInterval(this.autosave)
       }
