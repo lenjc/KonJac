@@ -13,6 +13,12 @@
           <li @click="downloadManga">成品</li>
         </ul>
       </div>
+      <div class="konjac_menu">
+        导入
+        <ul>
+          <li @click="$refs.fileText.click()">LabelPlus</li>
+        </ul>
+      </div>
       <div class="konjac_menu" @click="$refs.baseinfo.showModal()">
         基本信息
       </div>
@@ -24,6 +30,8 @@
 
         设置
       </div>
+
+      <input type="file" accept=".txt" id="fileText" ref='fileText' style="display:none" @input="labelPlus" />
     </div>
     <div id="layout-workspace">
       <div class="workspace-sider-left  scrollbar2">
@@ -561,8 +569,9 @@ export default {
       if (open) {
         clearInterval(this.autosave)
         this.autosave = setInterval(() => {
-          console.log('autoSave   ',new Date)
-          this.saveBody() }, 10 * 60 * 1000)
+          console.log('autoSave   ', new Date)
+          this.saveBody()
+        }, 10 * 60 * 1000)
       } else {
         clearInterval(this.autosave)
       }
@@ -607,7 +616,7 @@ export default {
       await chromeApi.savelocal({ 'translation': JSON.stringify(translationList) })
       await chromeApi.savelocal({ [`translation-${item.local_id}`]: JSON.stringify(item) })
       this.saved = false
-      console.log('save   ',new Date)
+      console.log('save   ', new Date)
       this.$message.success('保存成功')
     },
     async loadTranslation(request) {
@@ -738,6 +747,57 @@ export default {
         }
       }
     },
+    labelPlus() {
+      let file = this.$refs.fileText.files[0]
+      let reader = new FileReader()
+      reader.readAsText(file)
+      reader.onload = (e) => {
+        let data = e.currentTarget.result
+        let items = data.split(/>+\[.*\]<+/)
+        for (let index = 1; index < items.length; index++) {
+          const element = items[index];
+          let texts = element.split(/-+\[\d+\]-+/g)
+          if (texts) {
+            for (let index2 = 0; index2 < texts.length; index2++) {
+              const text = texts[index2];
+              text = text.replace(/\r\n*$/, '')
+              let position = text.match(/^\[[0-9,.]+\]/)
+              if (position) {
+                let po = position[0].match(/[0-9.]+/g)
+                console.log(index - 1, this.data.body[index - 1], this.imageSource[index - 1])
+                let width, height
+                if (this.data.body[index - 1] && this.data.body[index - 1].width && this.data.body[index - 1].height) {
+                  width = this.data.body[index - 1].width
+                  height = this.data.body[index - 1].height
+                } else if (this.imageSource[index - 1] && this.imageSource[index - 1].width && this.imageSource[index - 1].height) {
+                  width = this.imageSource[index - 1].width
+                  height = this.imageSource[index - 1].height
+                }
+                if (!(width && height)) { continue }
+                let item = {
+                  uid: uuidv4(),
+                  type: 'text',
+                  show: true,
+                  left: width * (po[0] * 1) / this.zoom,
+                  top: height * (po[1] * 1) / this.zoom,
+                  container: { width: '100px', height: '60px' },
+                  body: text.replace(/^\[[0-9,.]+\]/, ''),
+                  style: {},
+                  background: {},
+                  customStyle: '',
+                  customBackground: '',
+                  customContainer: '',
+                  quote: {}
+                }
+                this.data.body[index - 1].item.push(item)
+              }
+            }
+          }
+        }
+        this.$message.success('已导入')
+        this.$refs.fileText.value = ''
+      }
+    },
     loadFile(e) {
       let file = this.$refs.file.files[0]
       if (file.type != 'image/svg+xml') {
@@ -790,6 +850,7 @@ export default {
           }
         }
         this.data.body[this.filePage].item.push(item)
+        this.$refs.file.value = ''
       }
     },
     async downloadManga() {
