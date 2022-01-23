@@ -20,6 +20,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             let img = new Image
             img.src = request.params.src
             img.onload = () => {
+                console.log('Image load ',request.params.src)
                 let canvas = document.createElement("canvas");
                 let ctx = canvas.getContext('2d')
                 canvas.width = img.width
@@ -27,6 +28,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 ctx.drawImage(img, 0, 0, img.width, img.height);
                 let src = canvas.toDataURL('image/png');
                 sendResponse(src);
+            }
+            img.onerror = ()=>{
+                console.log('Image error ',request.params.src)
             }
             break
         case 'storage-get':

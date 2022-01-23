@@ -594,6 +594,7 @@ background-color: chartreuse;
     height: 30%;
     display: flex;    
     justify-content: center;
+    color: #000;
     align-items: center;
     font-size: 68px;
     letter-spacing: 10px;

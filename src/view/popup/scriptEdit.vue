@@ -14,8 +14,9 @@
         <a-input v-model="data.version"></a-input>
       </a-form-item>
       <a-form-item label="Code">
-        <textarea v-model="code" placeholder="async function getData(){return Promise.resolve({title:'TITLE',pages:[{index:0,src:'...'}]})};
-        async function ready(){if(ok){return Promise.resolve()}else{return Promise.reject()}}" style="height:250px" class="ant-input scrollbar"></textarea>
+        <textarea v-model="code" placeholder="async function getData(){return Promise.resolve({title:'TITLE',chapter:'chapter',pages:[{index:0,src:'...'}]})};
+        async function ready(){if(ok){return Promise.resolve()}else{return Promise.reject()}}" style="height:250px"
+          class="ant-input scrollbar"></textarea>
       </a-form-item>
     </a-form>
     <div id="script-submit">
@@ -58,7 +59,7 @@ export default {
   methods: {
     async saveItem() {
       let list = await chromeApi.getlocal('srcipt_list')
-      list = JSON.parse(list)
+      list = list ? JSON.parse(list) : []
       switch (this.type) {
         case 'create':
           this.data.id = uuidv4()

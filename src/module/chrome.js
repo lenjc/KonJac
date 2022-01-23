@@ -22,7 +22,7 @@ async function getlocal(key) {
     return new Promise((resolve, reject) => {
         chrome.storage.local.get([key], (res) => {
             if (res && res[key]) { resolve(res[key]) } else {
-                resolve(null)
+                resolve('')
             }
         });
     })
