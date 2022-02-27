@@ -8,8 +8,8 @@
     <a-modal size="small" :visible="quoteVisible" @cancel="quoteVisible=false" :closable="false"
       :bodyStyle="{padding:0}">
       <!-- <input type="text" > -->
-      <a-table :columns="columns" rowKey="uid" :data-source="sourceList" :pagination="false">
-        <span slot="uid" slot-scope="text,record,index">{{index+1}}</span>
+      <a-table :columns="columns" rowKey="id" :data-source="sourceList" :pagination="false">
+        <span slot="id" slot-scope="text,record,index">{{index+1}}</span>
         <span slot="type" slot-scope="text,record">{{text}}-{{record.shape}}</span>
         <div slot='src' slot-scope="text">
           <img style="max-height:150px;max-width:150px" :src="text" />
@@ -25,10 +25,10 @@
 <script>
 const columns = [
   {
-    dataIndex: "uid",
-    key: "uid",
+    dataIndex: "id",
+    key: "id",
     title: "序号",
-    scopedSlots: { customRender: 'uid' },
+    scopedSlots: { customRender: 'id' },
   },
   {
     dataIndex: 'type',
@@ -89,12 +89,12 @@ export default {
           this.showModal()
           break;
         case 'none':
-          this.$emit('paramChange', ['selectedTextStyle', 'container', 'background-image'], { 'value': 'none', 'src': '', 'uid': '', 'type': '' })
+          this.$emit('paramChange', ['selectedTextStyle', 'container', 'background-image'], { 'value': 'none', 'src': '', 'id': '', 'type': '' })
           break;
       }
     },
     quote(item) {
-      this.$emit('paramChange', ['selectedTextStyle', 'container', 'background-image'], { 'value': 'quote', 'src': item.src, 'uid': item.uid, 'type': item.type })
+      this.$emit('paramChange', ['selectedTextStyle', 'container', 'background-image'], { 'value': 'quote', 'src': item.src, 'id': item.id, 'type': item.type })
       this.quoteVisible = false
     }
   },

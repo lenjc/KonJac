@@ -1,6 +1,7 @@
 <template>
   <div class="param-item" data-type="params">
-    <div>{{title}}</div>
+    <div>  <input type="checkbox" v-if="checkbox" value="启用" :checked="checked" @click="checked=!checked" @change="paramChange(args,data)" />
+     <span>{{title}}</span> </div>
     <a-tooltip trigger="click" placement="rightBottom" overlayClassName="tooltip-color-picker">
       <template slot="title">
         <div data-type="params" style="user-select:none">
@@ -30,11 +31,14 @@ export default {
     colors: Object,
     title: String,
     args: Array,
+     checkbox: false,
+    cssstyle: ''
   },
   data() {
     this.tool = tool
     return {
-      data: this.colors
+      data: this.colors,
+       checked: false,
     }
   },
   watch: {
@@ -44,7 +48,11 @@ export default {
   },
   methods: {
     paramChange(args) {
-      this.$emit('paramChange', args, this.data)
+      if (this.checkbox) {
+        this.$emit('paramChange', args, this.data, this.checked)
+      } else {
+        this.$emit('paramChange', args, this.data)
+      }
     }
   }
 }
@@ -57,6 +65,7 @@ export default {
   position: relative;
   bottom: 0px;
   cursor: pointer;
+  box-shadow:  0 0 1px #000;
   border-end-end-radius: 3px;
   user-select: none;
   border-end-start-radius: 3px;

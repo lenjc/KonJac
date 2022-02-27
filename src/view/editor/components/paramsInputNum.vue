@@ -1,8 +1,10 @@
 <template>
   <div class="param-item" data-type="params">
-    <div>{{title}}</div>
-    <input v-model="data" type="number" :min="min" :step="step" :max="max" 
-      @input="paramChange(args)" />
+    <div> <input type="checkbox" v-if="checkbox" value="启用" :checked="checked" @click="checked=!checked"
+        @change="paramChange(args,data)" />
+      <span>{{title}}</span>
+    </div>
+    <input v-model="data" type="number" :min="min" :step="step" :max="max" @input="paramChange(args)" />
   </div>
 </template>
 
@@ -16,10 +18,13 @@ export default {
     step: String,
     args: Array,
     format: Function,
+    checkbox: false,
+    cssstyle: ''
   },
   data() {
     return {
-      data: this.value
+      data: this.value,
+      checked: false,
     }
   },
   watch: {
@@ -29,7 +34,14 @@ export default {
   },
   methods: {
     paramChange(args) {
-      this.$emit('paramChange', args, this.format ? this.format(this.data) : this.data*1)
+      let data = this.data
+      if(this.format){
+        data = this.format(this.data)}
+      if (this.checkbox) {
+        this.$emit('paramChange', args, data, this.checked)
+      } else {
+        this.$emit('paramChange', args, data)
+      }
     }
   }
 }

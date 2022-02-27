@@ -43,7 +43,7 @@
       </div>
       <span slot="syncStatus" slot-scope="text,record">
         <a-badge :status="record._id?record.syncStatus?'warning':'success':'default'"
-          :text="record._id?record.syncStatus?'待更新':'已提交':'未提交'" />
+          :text="record._id?(record.syncStatus?'待更新':'已提交'):'未提交'" />
       </span>
       <span slot="action" slot-scope="text,record,index">
         <template>
@@ -192,7 +192,7 @@ export default {
         content: `删除该项目`,
         onOk: async () => {
           let item = this.data.splice(index, 1)
-          await chromeAPI.removelocal(`translation-${item.local_id}`)
+          await chromeAPI.removelocal(`translation-${item[0].local_id}`)
           await chromeAPI.savelocal({ 'translation': JSON.stringify(this.data) })
         },
         okText: '确定',

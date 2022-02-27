@@ -1,12 +1,13 @@
 <template>
   <div id='svgEditorView' :style="svgData.style" data-type="svgEditorView" @contextmenu="lineListen">
     <svg id="svgEditor" xmlns="http://www.w3.org/2000/svg"
-      :style="{width:svgData.style.width,height:svgData.style.height}" @click="clickWatch" @mousedown="mousedownWatch">
+      :style="{width:svgData.style.width,height:svgData.style.height,cursor:(svgData.shape)?'crosshair':'auto'}"
+      @click="clickWatch" @mousedown="mousedownWatch">
       <g id="svgEditor-body" v-html="svgData.body" :transform="`translate(${svgData.offset.x},${svgData.offset.y})`">
       </g>
     </svg>
     <svg id="drawPanel" xmlns="http://www.w3.org/2000/svg"
-      :style="{width:svgData.style.width,height:svgData.style.height,position:'absolute',left:0,top:0}"
+      :style="{width:svgData.style.width,height:svgData.style.height,position:'absolute',left:0,top:0,cursor:(svgData.shape)?'crosshair':'auto'}"
       v-if="drawPanel.show">
       <g id='drawPanel-body' :transform="`translate(${svgData.offset.x},${svgData.offset.y})`">
         <path v-if="drawPanel.shape=='rect'" :d="drawPanel | drawShape('rect')"
@@ -31,8 +32,8 @@
       </g>
     </svg>
     <svg id="svgEditor-panel" xmlns="http://www.w3.org/2000/svg"
-      :style="{width:svgData.style.width,height:svgData.style.height}" v-if="svgData.currentNode"
-      @click.stop="listenPanel">
+      :style="{width:svgData.style.width,height:svgData.style.height,cursor:(svgData.addNewPoint)?'crosshair':'auto'}"
+      v-if="svgData.currentNode" @click.stop="listenPanel">
       <g :transform="`${svgData.status.move?`translate(${svgData.move.x},${svgData.move.y})`:''}`">
         <g id="svgTarget" :transform="svgData | transformFilter">
           <rect v-if="svgData.currentNode.type=='rect'" :x="svgData.currentNode.params.x"
@@ -117,9 +118,9 @@ const defaultStyle = {
   polyline: {
     params: { 'fill-rule': 'nonzero', },
     style: {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -135,7 +136,7 @@ const defaultStyle = {
     params: {},
     style: {
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -150,9 +151,9 @@ const defaultStyle = {
   polygon: {
     params: { 'fill-rule': 'nonzero', },
     style: {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -167,9 +168,9 @@ const defaultStyle = {
   circle: {
     params: {},
     style: {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -184,9 +185,9 @@ const defaultStyle = {
   ellipse: {
     params: {},
     'style': {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -201,9 +202,9 @@ const defaultStyle = {
   rect: {
     params: { rx: 0, ry: 0 },
     'style': {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -220,9 +221,9 @@ const defaultStyle = {
       'fill-rule': 'nonzero',
     },
     'style': {
-      'fill': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
+      'fill': { rgba: { r: 255, g: 255, b: 255, a: 1, } },
       'stroke': { rgba: { r: 0, g: 0, b: 0, a: 1, } },
-      'stroke-width': '1',
+      'stroke-width': '0',
       'stroke-opacity': '1',
       'stroke-dasharray': 'none',
     },
@@ -237,6 +238,8 @@ const defaultStyle = {
 }
 
 import tool from '../../../module/tool'
+
+
 export default {
   props: {
     svgData: Object,
@@ -394,7 +397,6 @@ export default {
       editPanel: {
         on: false
       },
-      newPoint: ''
     }
   },
   created() {
@@ -412,11 +414,8 @@ export default {
     box(val) {
       this.svgData.box = val
     },
-    newPoint(val, old) {
-      if (!old && val) { this.process.push('Draw') }
-    }
   },
-  methods: {
+  methods: {   
     controlPositionX(data) {
       this.modifyPosition({ x: data * 1 - this.box.x, y: 0 })
     },
@@ -462,7 +461,7 @@ export default {
       })
     },
     selectPoint(index) {
-      this.newPoint = ''
+      this.svgData.addNewPoint = ''
       this.svgData.currentLine = this.svgData.currentNode.points[index]
       this.svgData.currentLineIndex = index
       if (this.process[this.process.length - 1] != 'Point') { this.process.push('Point') }
@@ -473,7 +472,7 @@ export default {
       }
     },
     movePoint($event, item, args) {
-      this.newPoint = ''
+      this.svgData.addNewPoint = ''
       document.onmousemove = (e) => {
         let point = document.getElementById('svgEditor-panel').createSVGPoint()
         point.x = e.offsetX / this.zoom, point.y = e.offsetY / this.zoom
@@ -528,18 +527,19 @@ export default {
       this.lineListen()
     },
     addNewPoint(type) {
-      this.newPoint = type
+      if (!this.process.includes('Draw')) { this.process.push('Draw') }
+      this.svgData.addNewPoint = type
+      this.$forceUpdate()
     },
     listenPanel(e) {
-      if (this.newPoint) {
-        switch (this.newPoint) {
+      if (this.svgData.addNewPoint) {
+        switch (this.svgData.addNewPoint) {
           case 'L': case 'M':
             let point = document.getElementById('svgEditor-panel').createSVGPoint()
-            point.x = e.offsetX / this.zoom
-            point.y = e.offsetY / this.zoom
+            point.x = e.offsetX / this.zoom, point.y = e.offsetY / this.zoom
             let rotatedPoint = point.matrixTransform(document.getElementById('svgLine').getCTM().inverse())
             this.svgData.currentNode.points.push({
-              type: this.newPoint,
+              type: this.svgData.addNewPoint,
               x: rotatedPoint.x,
               y: rotatedPoint.y,
               params: {
@@ -549,7 +549,7 @@ export default {
                 y2: rotatedPoint.y - (rotatedPoint.y - this.svgData.currentNode.points[this.svgData.currentNode.points.length - 1].y) / 4 * 1,
               }
             })
-            if (this.newPoint == 'M') { this.newPoint = '' }
+            if (this.svgData.addNewPoint == 'M') { this.svgData.addNewPoint = '' }
             break;
           default:
             break;
@@ -789,7 +789,7 @@ export default {
         this.lineListen()
       }
     },
-    cancelDrawPath() {
+    cancelDrawPath(e) {
       let path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       let d = `M${this.drawPanel.points[0].x},${this.drawPanel.points[0].y}`
       this.drawPanel.points.forEach((ele, index) => {
@@ -1285,8 +1285,8 @@ export default {
       let params = e.path.find(ele => ele.dataset && ele.dataset.type == 'params')
       let paramView = e.path.find(ele => ele.id == 'workspace-param')
       let view = e.path.find(ele => ele.id == 'svgEditorView')
-      if (!(paramView || view || params)) {  
-        let res =    this.lineListen(e)  
+      if (!(paramView || view || params)) {
+        let res = this.lineListen(e)
         for (let index = 0; index < res; index++) {
           this.lineListen(e)
         }
@@ -1296,7 +1296,7 @@ export default {
       let process = this.process.pop()
       switch (process) {
         case 'Draw':
-          this.newPoint = ''
+          this.svgData.addNewPoint = ''
           break;
         case 'Draw(Path)':
           this.cancelDrawPath()
@@ -1308,7 +1308,7 @@ export default {
           break
         case 'Reedit':
           this.svgData.status.edit = false
-         
+
           break
         case 'rect': case 'path': case 'ellipse': case 'circle': case 'polygon': case 'line': case 'polyline':
           this.cancelShape();
@@ -1334,6 +1334,8 @@ export default {
   position: absolute;
   z-index: 999;
   user-select: none;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 5px #4f80ff;
   .svg-point {
     cursor: move;
   }

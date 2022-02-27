@@ -195,6 +195,7 @@ export default {
     async downloadWork(record) {
       let res = await api.getWork(record._id)
       let existed = await chromeAPI.getlocal(`translation-${record.local_id}`)
+      console.log(existed)
       if (existed) {
         this.$confirm({
           okText: '是',
@@ -207,7 +208,9 @@ export default {
             res.data.result.syncStatus = 0
             res.data.result.syncTime = Date.parse(new Date)
             let { body, ...item } = res.data.result
+            console.log(item)
             if (listItem) { Object.assign(listItem, item) } else { list.push(item) }
+
             await chromeAPI.savelocal({ 'translation': JSON.stringify(list) })
             await chromeAPI.savelocal({ [`translation-${record.local_id}`]: JSON.stringify(res.data.result) })
             this.$message.success('下载完成')
@@ -217,6 +220,8 @@ export default {
       } else {
         let list = await chromeAPI.getlocal('translation')
         list = list ? JSON.parse(list) : []
+        res.data.result.syncStatus = 0
+        res.data.result.syncTime = Date.parse(new Date)
         let { body, ...item } = res.data.result
         list.push(item)
         await chromeAPI.savelocal({ 'translation': JSON.stringify(list) })

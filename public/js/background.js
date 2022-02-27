@@ -16,11 +16,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         case 'readingMode':
             getCode(request.url).then(res => { sendResponse(res) })
             break
+        case 'css':
+            insertFont(request.css)
+            sendResponse({ code: 0, sender: 'background.html' })
+            break
         case 'image':
             let img = new Image
             img.src = request.params.src
             img.onload = () => {
-                console.log('Image load ',request.params.src)
+                console.log('Image load ', request.params.src)
                 let canvas = document.createElement("canvas");
                 let ctx = canvas.getContext('2d')
                 canvas.width = img.width
@@ -29,8 +33,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 let src = canvas.toDataURL('image/png');
                 sendResponse(src);
             }
-            img.onerror = ()=>{
-                console.log('Image error ',request.params.src)
+            img.onerror = () => {
+                console.log('Image error ', request.params.src)
             }
             break
         case 'storage-get':
@@ -97,6 +101,10 @@ async function insertCSS() {
     chrome.tabs.insertCSS(tabs[0].id, { file: 'css/konjac.css' });
 }
 
+async function insertFont(css) {
+    let tabs = await queryTab({ active: true })
+    chrome.tabs.insertCSS(tabs[0].id, { code: css });
+}
 
 async function editor2Data(data) {
     try {

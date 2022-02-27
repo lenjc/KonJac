@@ -8,21 +8,33 @@
     </div>
     <div class="param-tab" v-if="!svgData.currentNode">
       <div class="param-container">
-        <div >
-          <button class="param-button" @click="paramChange(['svgData','shape'],'rect')">
+        <div>
+          <button class="param-button" :class="{'param-button-selected':svgData && svgData.shape=='rect'}"
+            @click="paramChange(['svgData','shape'],'rect')">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-juxing" />
             </svg> 矩形</button>
-          <button class="param-button" @click="paramChange(['svgData','shape'],'ellipse')">
+          <div v-show="svgData && svgData.shape=='rect'">
+            点击起始位置拖动鼠标创建矩形
+          </div>
+          <button class="param-button" :class="{'param-button-selected':svgData && svgData.shape=='ellipse'}"
+            @click="paramChange(['svgData','shape'],'ellipse')">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-tuoyuan1" />
             </svg> 椭圆
           </button>
-          <button class="param-button" @click="paramChange(['svgData','shape'],'path')">
+          <div v-show="svgData && svgData.shape=='ellipse'">
+            点击起始位置拖动鼠标创建椭圆
+          </div>
+          <button class="param-button" :class="{'param-button-selected':svgData && svgData.shape=='path'}"
+            @click="paramChange(['svgData','shape'],'path')">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-pen" />
             </svg> 路径
           </button>
+          <div v-show="svgData && svgData.shape=='path'">
+            点击生成路径点创建形状
+          </div>
         </div>
       </div>
       <div class="param-container">
@@ -41,9 +53,9 @@
       <div class="param-container">
         <div>操作</div>
         <div>
-          <button class="param-button" v-if="!['line'].includes(svgData.currentNode.type)"
+          <button class="param-button" v-if="!['line'].includes(svgData.currentNode.type)" :class="{'param-button-selected':svgData.addNewPoint=='L'}"
             @click="triggetMethod(['$refs','svgEditorView','addNewPoint'],'L')">添加点</button>
-          <button class="param-button" v-if="['path'].includes(svgData.currentNode.type)"
+          <button class="param-button" v-if="['path'].includes(svgData.currentNode.type)" :class="{'param-button-selected':svgData.addNewPoint=='M'}"
             @click="triggetMethod(['$refs','svgEditorView','addNewPoint'],'M')">添加起点</button>
         </div>
       </div>
@@ -176,6 +188,7 @@ export default {
   },
   data() {
     return {
+            selected:'',
       currentTab: 'base',
       options: {
         pathType: [
@@ -195,6 +208,9 @@ export default {
         ]
       }
     }
+  },
+  watch() {
+
   },
   methods: {
     addPathNode() {
@@ -246,5 +262,7 @@ export default {
 </script>
 
 <style lang="less">
-
+.param-button-selected {
+  background-color: #4f80ff !important;
+}
 </style>

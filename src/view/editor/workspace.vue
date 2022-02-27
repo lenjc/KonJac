@@ -11,6 +11,7 @@
         <ul>
           <li @click="downloadSource">素材</li>
           <li @click="downloadManga">成品</li>
+          <li @click="downloadLabelPlus">LabelPlus</li>
         </ul>
       </div>
       <div class="konjac_menu">
@@ -27,17 +28,15 @@
         <a-icon type="loading" v-show="saved" />
       </div>
       <div class="konjac_menu" @click="$refs.setting.showModal()">
-
         设置
       </div>
-
       <input type="file" accept=".txt" id="fileText" ref='fileText' style="display:none" @input="labelPlus" />
     </div>
     <div id="layout-workspace">
       <div class="workspace-sider-left  scrollbar2">
         <input type="file" ref='file' style="display:none" @change="loadFile" />
         <div v-for="(thumbnailPage,pageindex) in totalSourceLength" :key="'thumbnailPage-'+pageindex">
-          <div class="thumbnail-sider-left">
+          <div class="thumbnail-sider-left ">
             <a class="thumbnail-page-index" @click="scrollInto(pageindex)">
               {{thumbnailPage}}
             </a>
@@ -55,9 +54,7 @@
                 </svg>
                 {{imageSource[pageindex]?imageSource[pageindex].status?imageSource[pageindex].status==1?`${imageSource[pageindex].height}×${imageSource[pageindex].width}`:'Error':'loading':'NO-IMAGE'}}
               </div>
-              <div style='height:20px;line-height:20px' v-show="
-              imageSource[pageindex] && data.body[pageindex] && 
-
+              <div style='height:20px;line-height:20px' v-show="imageSource[pageindex] && data.body[pageindex] && 
               (imageSource[pageindex].height!=data.body[pageindex].height
               ||  imageSource[pageindex].width!=data.body[pageindex].width)
               ">
@@ -89,21 +86,25 @@
           </div>
           <vuedraggable class="wrapper" v-model="data.body[pageindex].item">
             <transition-group>
-              <div v-for="(item,itemIndex) in data.body[pageindex].item" :key="'item--'+itemIndex"
-                class="thumbnail-item" :class="{'thumbnail-item-selected':(selectedItem==item)}">
-                <div>
+              <div v-for="(item,itemIndex) in data.body[pageindex].item" :key="'item--'+itemIndex" data-type='item'
+                class="thumbnail-item rightmouse" :data-page="pageindex" :data-index="itemIndex"
+                :class="{'thumbnail-item-selected':(selectedItem==item),'thumbnail-item-selected2':selectedList.includes(item)}">
+                <div style="cursor: pointer;position: relative;" title="显示">
                   <a-icon type="font-size" v-if="item.type=='text'" />
                   <a-icon type="picture" v-if="item.type=='clip'" />
                   <a-icon type="picture" v-if="item.type=='svg'" />
                 </div>
-                <div @click="scrollInto(pageindex);selectItem(item,{page:pageindex,index:itemIndex})">
+                <div
+                  @click="scrollInto(pageindex);if(basetool){lostBasetool()};selectItem(item,{page:pageindex,index:itemIndex},$event)">
                   <span v-if="item.type=='text'">{{item | bodyFilter}}</span>
-                  <span v-if="item.type=='clip'">Clip-{{item.uid}}</span>
-                  <span v-if="item.type=='svg'"> SVG-{{item.uid}}</span>
+                  <span v-if="item.type=='clip'">Clip-{{item.id}}</span>
+                  <span v-if="item.type=='svg'"> SVG-{{item.id}}</span>
                 </div>
-                <div>
+                <div style="position: relative;">
+                  <a-icon type="copy" v-show="copyItem == item" />
                   <a-icon type="eye" v-show="item.show" @click="item.show=!item.show" />
                   <a-icon type="eye-invisible" v-show="!item.show" @click="item.show=!item.show" />
+                  <a-icon type="lock" v-show="item.lock" @click="item.lock=false" />
                 </div>
               </div>
             </transition-group>
@@ -112,71 +113,86 @@
       </div>
       <div id="workspace-content">
         <div id="msg"></div>
-        <div id="workspace" class="scrollbar">
-          <richTextEditorMenu :textEditorMenuPositon="textEditorMenuPositon" />
+        <richTextEditorMenu :textEditorMenuPositon="textEditorMenuPositon" />
+        <div id="workspace" class="scrollbar" :style="{zoom:zoom}">
           <customClipView v-if="customClip.status.show" :customClip="customClip" @paramChange="setData"
-            @addClipItem="addClipItem" :zoom="zoom" :style="{zoom:zoom}" :process="process" />
+            @addClipItem="addClipItem" :zoom="zoom" :process="process" />
           <svgEditorView ref="svgEditorView" v-if="svgData.status.show" :svgData="svgData" @paramChange="setData"
-            @addSVGItem="addSVGItem" :zoom="zoom" :style="{zoom:zoom}" :process="process" />
-          <div v-for="(page,pageIndex) in totalSourceLength" :key="'page-'+pageIndex" class="workspace-item"
-            :data-index="pageIndex" data-type="page" :id="`page-${pageIndex}`" :style="{zoom:zoom}"
-            @click="pageClickWatch($event,pageIndex)" @mousedown="pageMouseDownWatch($event,pageIndex)">
-            <div class="workspace-page" data-type="container">
-              <img v-if="!imageSource[pageIndex]" class="workspace-img" :id="`image-${pageIndex}`"
-                :style="`width:${data.body[pageIndex].width}px;height:${data.body[pageIndex].height}px;`"
-                draggable="false" />
-              <img v-if="imageSource[pageIndex]" class="workspace-img" :src="imageSource[pageIndex].src"
-                :id="`image-${pageIndex}`"
-                :style="`width:${imageSource[pageIndex].width}px;height:${imageSource[pageIndex].height}px;`"
-                draggable="false" @error="imageOnError(pageIndex)" @load="imageOnload(pageIndex)">
-              <div>
-                <div v-for="(item,index) in data.body[pageIndex].item" :key="'item-'+index" data-type="item"
-                  :data-index="index" :id="'item-'+item.uid" :style="`left:${item.left}px;top:${item.top}px`"
-                  class="body-item" v-show="item.show">
-                  <div v-if="item.type=='text'">
-                    <div class="konjac_item_container_resize"
-                      v-for="(xy,xyindex) in [[-1,-1,'nw-resize'],[0,-1,'n-resize'],[-1,1,'sw-resize'],[-1,0,'w-resize'],[1,0,'e-resize'],[1,-1,'ne-resize'],[0,1,'s-resize'],[1,1,'se-resize']]"
-                      :key="'konjac_item_container_resize-'+xyindex" :style="xy | resizePoint" data-type="params"
-                      :class="{'konjac_item_selected':(selectedItem==item)}" @mousedown.stop="resizeTextDom(item,xy)">
-                    </div>
-                    <div class="konjac_item_line" v-for="(tb,tbindex) in ['width:100%;height:1px;top:-4px;left:0px', 'width: 100%;height: 1px;bottom:-4px;left:0px'
-                  , 'width: 1px;height: 100%;top:0;left:-4px' , 'width: 1px;height: 100%;top:0;right:-4px' ]"
-                      :style="tb" :key="'konjac_item_line-'+tbindex"
-                      :class="{'konjac_item_selected':(selectedItem==item)}"></div>
-                    <div class="konjac_item_container default_konjac_css_container"
-                      :style="Object.assign({},item.container,tool.jsonParse(item.customContainer))"
-                      :class="{'konjac_item_move':(basetool=='move')}" @mousedown="moveDom($event,item)">
-                      <div
-                        :style="Object.assign({'position': 'absolute','top':'0','left':'0'},item.style,item.background,tool.jsonParse(item.customBackground))"
-                        v-html="item.body" class="default_konjac_css_style default_konjac_css_background">
+            @addSVGItem="addSVGItem" :zoom="zoom" :process="process" />
+          <div style="margin:auto"
+            :class="{'pageMode':setting.viewMode=='page','scrollMode':setting.viewMode=='scroll'}">
+            <div v-for="(page,pageIndex) in totalSourceLength" :key="'page-'+pageIndex" class="workspace-item"
+              :style="{'cursor':cursor?cursor:'auto'}" :data-page="pageIndex" :data-index="pageIndex" data-type="page"
+              :id="`page-${pageIndex}`" @click="pageClickWatch($event,pageIndex)"
+              @mouseenter="mousePositon.page=pageIndex,mousePositon.on=true" @mouseleave="mousePositon.on=false"
+              @mousemove="mousePositon.event=$event" @mousedown="pageMouseDownWatch($event,pageIndex)"
+              v-show="showPage[pageIndex]">
+              <div class="workspace-page" data-type="container">
+                <img v-if="!imageSource[pageIndex]" class="workspace-img" :id="`image-${pageIndex}`"
+                  :style="`width:${data.body[pageIndex].width}px;height:${data.body[pageIndex].height}px;z-index:0`"
+                  draggable="false" />
+                <img v-if="imageSource[pageIndex]" class="workspace-img" :src="imageSource[pageIndex].src"
+                  :id="`image-${pageIndex}`"
+                  :style="`width:${imageSource[pageIndex].width}px;height:${imageSource[pageIndex].height}px;z-index:0`"
+                  draggable="false" @error="imageOnError(pageIndex)" @load="imageOnload(pageIndex)">
+                <div>
+                  <div v-for="(item,index) in data.body[pageIndex].item" :key="'item-'+index" data-type='item'
+                    :data-page="pageIndex" :data-index="index" :id="'item-'+item.id"
+                    :style="`left:${item.left}px;top:${item.top}px;z-index:${index+1}`" class="body-item rightmouse"
+                    :class="{'item-unlock':!item.lock,'zindexMax':selectedItem==item}" v-show="item.show">
+
+                    <div v-if="item.type=='text'">
+                      <div class="konjac_item_container_resize"
+                        v-for="(xy,xyindex) in [[-1,-1,'nw-resize'],[0,-1,'n-resize'],[-1,1,'sw-resize'],[-1,0,'w-resize'],[1,0,'e-resize'],[1,-1,'ne-resize'],[0,1,'s-resize'],[1,1,'se-resize']]"
+                        :key="'konjac_item_container_resize-'+xyindex" :style="xy | resizePoint" data-type="params"
+                        :class="{'konjac_item_selected':(selectedItem==item)}"
+                        @mousedown.self="resizeTextDom($event,item,xy)">
                       </div>
-                      <div
-                        :style="Object.assign({'position': 'absolute','user-select':'text','top':'0','left':'0'},item.style,tool.jsonParse(item.customStyle)) "
-                        :id="'textEditor-'+item.uid" v-html="item.body" contenteditable="false" data-type="editor"
-                        class="default_konjac_css_style item_editor" @blur.stop="saveTextItem($event,item)"
-                        @dblclick.stop="editTextItem(item,{page:pageIndex,index:index})"
-                        @click="selectItem(item,{page:pageIndex,index:index})">
+                      <div class="konjac_item_line"
+                        v-for="(tb,tbindex) in ['width:calc(100% + 8px);height:1px;top:-4px;left:-4px', 'width: calc(100% + 8px);height: 1px;bottom:-4px;left:-4px'
+                  , 'width: 1px;height: calc(100% + 8px);top:-4px;left:-4px' , 'width: 1px;height: calc(100% + 8px);top:-4px;right:-4px' ]"
+                        :style="tb" :key="'konjac_item_line-'+tbindex"
+                        :class="{'konjac_item_selected':(selectedItem==item || selectedList.includes(item))}"></div>
+
+                      <div class="konjac_item_container default_konjac_css_container"
+                        :style="Object.assign({},item.container,tool.jsonParse(item.customContainer),{'user-select': 'none'})"
+                        :class="{'konjac_item_move':(basetool=='move')}"
+                        @mousedown.capture="moveDom($event,item,{page:pageIndex,index:index})">
+                        <div :id="`textItem-${item.id}`" v-show="focusItem!=item.id"
+                          :style="Object.assign({'position': 'absolute','top':'0','left':'0','user-select': 'none'},item.style,item.background,tool.jsonParse(item.customBackground))"
+                          v-html="item.body" class="default_konjac_css_style default_konjac_css_background">
+                        </div>
+                        <div
+                          :style="Object.assign({'position': 'absolute','user-select':'text','top':'0','left':'0','user-select': 'none'},item.style,tool.jsonParse(item.customStyle)) "
+                          :id="'textEditor-'+item.id" v-html="item.body" contenteditable="false" data-type="editor"
+                          draggable="false" class="default_konjac_css_style item_editor" @focus="focusItem=item.id"
+                          @blur.stop="saveTextItem($event,item)"
+                          @dblclick.capture="editTextItem(item,{page:pageIndex,index:index},$event)">
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div v-if="item.type=='clip'">
-                    <div class="konjac_item_line" v-for="(tb,tbindex) in ['width:100%;height:1px;top:0;left:0px', 'width: 100%;height: 1px;bottom:0;left:0px'
+
+                    <div v-if="item.type=='clip'">
+                      <div class="konjac_item_line" v-for="(tb,tbindex) in ['width:100%;height:1px;top:0;left:0px', 'width: 100%;height: 1px;bottom:0;left:0px'
                   , 'width: 1px;height: 100%;top:0;left:0px' , 'width: 1px;height: 100%;top:0;right:0px' ]" :style="tb"
-                      :key="'konjac_item_line-'+tbindex" :class="{'konjac_item_selected':(selectedItem==item)}"></div>
-                    <img :src="item.src" draggable="false" @click="selectItem(item,{page:pageIndex,index:index})"
-                      @dblclick.stop="reeditClipShape($event,item)" @mousedown="moveDom($event,item)" />
-                  </div>
-                  <div v-if="item.type=='svg'">
-                    <div class="konjac_item_line" v-for="(tb,tbindex) in ['width:100%;height:1px;top:0;left:0px', 'width: 100%;height: 1px;bottom:0;left:0px'
+                        :key="'konjac_item_line-'+tbindex" :class="{'konjac_item_selected':(selectedItem==item)}"></div>
+                      <img :src="item.src" draggable="false" @dblclick.stop="reeditClipShape($event,item)"
+                        @mousedown="moveDom($event,item,{page:pageIndex,index:index})" />
+                    </div>
+
+                    <div v-if="item.type=='svg'">
+                      <div class="konjac_item_line" v-for="(tb,tbindex) in ['width:100%;height:1px;top:0;left:0px', 'width: 100%;height: 1px;bottom:0;left:0px'
                   , 'width: 1px;height: 100%;top:0;left:0px' , 'width: 1px;height: 100%;top:0;right:0px' ]" :style="tb"
-                      :key="'konjac_item_line-'+tbindex" :class="{'konjac_item_selected':(selectedItem==item)}"></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" :style="Object.assign({},item.style)"
-                      :viewBox="item.attributes?item.attributes.viewBox:''">
-                      <g v-html="item.body" :transform="`translate(${-item.translate.x},${-item.translate.y})`"
-                        @dblclick="reeditSVG($event,item)" @click="selectItem(item,{page:pageIndex,index:index})"
-                        @mousedown="moveDom($event,item)">
-                      </g>
-                    </svg>
+                        :key="'konjac_item_line-'+tbindex" :class="{'konjac_item_selected':(selectedItem==item)}"></div>
+                      <svg xmlns="http://www.w3.org/2000/svg" :style="Object.assign({},item.style)"
+                        :viewBox="item.attributes?item.attributes.viewBox:''">
+                        <g v-html="item.body" :transform="`translate(${-item.translate.x},${-item.translate.y})`"
+                          @dblclick="reeditSVG($event,item)"
+                          @mousedown="moveDom($event,item,{page:pageIndex,index:index})">
+                        </g>
+                      </svg>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -187,43 +203,75 @@
           <div>
             位置: Index <span v-for="(i,index) in process" :key="'ipro-'+index"> > {{i}}</span>
           </div>
-          <div style="margin-right:20px">
-            显示比例: <select style="border:none;color:#444" v-model="zoom">
-              <option v-for="i in 8" :key="i" :value="i/4">{{i*25}}%</option>
-            </select>
+          <div v-show="setting.viewMode=='page'" class="pagination">
+            <div style="cursor: pointer;margin-right:5px"
+              @click="pagination( currentPage + 1  - 1 * setting.viewPage )">
+              <a-icon type="arrow-left" />
+            </div>
+            <a-input-number size="small"
+              style="width:60px;text-align:center;background:transparent;color:#fff;border:none !important;outline:none !important;box-shadow:none "
+              v-model="currentPage" :formatter="value => value*1+1" :parser="value => value*1-1" :min="0"
+              :max="totalSourceLength-1" :step="setting.viewPage" @change="pagination($event+1)">
+            </a-input-number>
+            <span style="font-size:16px">/ {{totalSourceLength}}</span>
+
+            <div style="cursor: pointer;margin-left:5px" @click="pagination( currentPage + 1  + 1 * setting.viewPage )">
+              <a-icon type="arrow-right" />
+            </div>
+
+          </div>
+          <div style="margin-right:20px;display:flex;flex-direction:row">
+            显示比例: <a-input-number
+              style="width:80px;text-align:center;background:transparent;color:#fff;border:none !important;outline:none !important;box-shadow:none "
+              size="small" v-model="zoom" :formatter="value => value*100 +'%'" :precision="2"
+              :parser="value => (parseInt(value)/100).toFixed(2)" :min="0.1" :max="10" :step="0.05"
+              @change="$forceUpdate()">
+            </a-input-number>
+            <div title="适应高度" style="margin:0 10px;cursor: pointer;" @click="fitHeight">
+              <a-icon type="column-height" />
+            </div>
+            <div title="原始比例" style="cursor: pointer;" @click="zoom=1">
+              <a-icon type="fullscreen" />
+            </div>
           </div>
         </div>
       </div>
       <div id="workspace-sider-right" class="scrollbar2">
         <div id="workspace-basetool">
-          <div class="basetool-item" @click="selectedItem=null; basetool='text'" data-type="basetool"
+          <div class="basetool-item" @click="selectTool('text')" data-type="basetool"
             :class="{'basetool-item-seleted':(basetool=='text')}">
             <a-icon type="font-size" />
           </div>
-          <div class="basetool-item" @click="selectedItem=null;basetool='clip-rect'" data-type="basetool"
+          <div class="basetool-item" @click="selectTool('clip-rect')" data-type="basetool"
             :class="{'basetool-item-seleted':(basetool=='clip-rect')}">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-jiancai" />
             </svg>
           </div>
-          <div class="basetool-item" @click="selectedItem=null;basetool='clip-path'" data-type="basetool"
+          <div class="basetool-item" @click="selectTool('clip-path')" data-type="basetool"
             :class="{'basetool-item-seleted':(basetool=='clip-path')}">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-jiancai1" />
             </svg>
           </div>
-          <div class="basetool-item" @click="selectedItem=null;basetool='svg'" data-type="basetool"
+          <div class="basetool-item" @click="selectTool('svg')" data-type="basetool"
             :class="{'basetool-item-seleted':(basetool=='svg')}">
             <svg class="icon" aria-hidden="true">
               <use xlink:href="#icon-pen" />
             </svg>
           </div>
+
+          <div class="basetool-item" @click="selectTool('snippets')" data-type="basetool"
+            :class="{'basetool-item-seleted':(basetool=='snippets')}">
+            <a-icon type="snippets" />
+          </div>
+
         </div>
         <div id="workspace-param">
           <tabsText v-if="basetool=='text' || (selectedItem && selectedItem.type=='text')" :cssParams="cssParams"
             :selectedItem="selectedItem" :selectedTextStyle="selectedTextStyle" @paramChange="setData"
             :dataSource="data.body" :presetStyle="presetStyle" @setPresetStyle="setPresetStyle"
-            @triggetMethod="triggetMethod" />
+            :currentStyle="currentPresetStyle" @triggetMethod="triggetMethod" />
           <drawClipShapeMenu v-if="customClip.status.show" @paramChange="setData" :customClip="customClip"
             @addClipItem="addClipItem" :process="process" />
           <clipItemMenu v-if="selectedItem && selectedItem.type=='clip'" :selectedItem="selectedItem"
@@ -233,16 +281,65 @@
           <svgItemMenu v-if="selectedItem && selectedItem.type=='svg'" :selectedItem="selectedItem"
             @paramChange="setData" />
           <tips v-if="basetool" :basetool="basetool" />
+          <snippets v-if="basetool=='snippets'" :snippets="snippets" :seleted="snippetsSeleted"
+            @paramChange="setData" />
           <baseinfo ref="baseinfo" :data="data" @paramChange="setData" />
         </div>
       </div>
     </div>
+
     <a-modal :visible="visible.presetStyleTitle" title="样式名称" width="300px" okText="确定" cancelText="取消"
       @cancel="visible.presetStyleTitle=false" @ok="createPresetStyle">
       <a-input v-model="title.presetStyleTitle" placeholder="请输入"></a-input>
     </a-modal>
+
+    <a-modal :visible="visible.snippets" title="预设文本名称" width="300px" okText="确定" cancelText="取消" data-type='params'
+      @cancel="visible.snippets=false" @ok="savesnippets">
+      <a-input v-model="title.snippets" placeholder="请输入"></a-input>
+    </a-modal>
+
     <editITem ref='editITem' @paramChange="setData" />
     <setting ref='setting' :setting="setting" @triggetMethod="triggetMethod" />
+    <div id="contextmenu" :style="menuPosition">
+      <ul>
+        <li @click="setItemIndex('top')" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="vertical-align-top" />置于顶层
+        </li>
+        <li @click="setItemIndex('up')" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="up" />提升层级
+        </li>
+        <li @click="setItemIndex('down')" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="down" />降低层级
+        </li>
+        <li @click="setItemIndex('bottom')" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="vertical-align-bottom" />置于底层
+        </li>
+        <li @click="copyItem = selectedItem" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="copy" />复制元素
+        </li>
+        <li @click="lockElement(selectIndex.page,selectIndex.index)"
+          v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="lock" v-show="selectedItem && !selectedItem.lock" />
+          <a-icon type="unlock" v-show="selectedItem && selectedItem.lock" />
+          {{selectedItem?selectedItem.lock?'解锁元素':'锁定元素':''}}
+        </li>
+        <li @click="showHidden(selectIndex.page,selectIndex.index)" v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="eye" v-show="selectedItem && !selectedItem.show" />
+          <a-icon type="eye-invisible" v-show="selectedItem && selectedItem.show" />
+          {{selectedItem?selectedItem.show?'隐藏元素':'显示元素':''}}
+        </li>
+        <li @click="deleteItem(selectIndex.page,selectIndex.index)" style="color:#ff0000"
+          v-show="selectedItem && menuPosition.type =='item'">
+          <a-icon type="delete" />删除元素
+        </li>
+        <li style="color:#ff0000" @click="deletesnippets" v-show="menuPosition.type =='snippets'">
+          <a-icon type="delete" />删除文本
+        </li>
+      </ul>
+    </div>
+    <labelPlus ref='labelPlus' :default_konjac_css="default_konjac_css" :imageSource="imageSource"
+      :totalSourceLength="totalSourceLength" @loadLabelPlus="loadLabelPlus" />
+    <div id="cleanArea" style="display:none"></div>
   </div>
 </template>
 
@@ -252,6 +349,7 @@ import tool from '../../module/tool'
 import richTextEditorMenu from './components/richTextEditorMenu.vue'
 import tabsText from './components/tabsText.vue'
 import bytes from 'utf8-bytes'
+import labelPlus from './components/labelPlus.vue'
 
 import customClipView from './clip/customClipView.vue'
 import drawClipShapeMenu from './clip/drawClipShapeMenu.vue'
@@ -264,7 +362,7 @@ import tips from './components/basetoolTip.vue'
 import baseinfo from './components/baseinfo.vue'
 import editITem from './components/editITem.vue'
 import setting from './components/setting.vue'
-
+import snippets from './components/snippets.vue'
 import vuedraggable from 'vuedraggable';
 import domtoimage from 'dom-to-image';
 import { saveAs } from 'file-saver';
@@ -280,16 +378,18 @@ const default_konjac_css = {
     'writing-mode': 'horizontal-tb',
     'text-align': 'left',
     'line-height': '1.5',
+    'font-style': 'normal',
     'transform': {
       'rotate': 0,
       'rotate3d': { x: 0, y: 0, z: 0, a: 0 }
     },
+    'font-stretch': 'normal',
     'padding': '5px',
     'padding-top': '5px',
     'padding-bottom': '5px',
     'padding-left': '5px',
     'padding-right': '5px',
-    'font-weight': "normal",
+    'font-weight': '400',
     'font-family': "Microsoft YaHei, 微软雅黑, sans-serif",
     'letter-spacing': 'normal',
     'white-space': 'normal',
@@ -310,7 +410,7 @@ const default_konjac_css = {
       'rotate3d': { x: 0, y: 0, z: 0, a: 0 }
     },
     'background-color': { rgba: { r: 255, g: 255, b: 255, a: 0 } },
-    'background-image': { value: 'none', url: '', uid: '', type: '' },
+    'background-image': { value: 'none', url: '', id: '', type: '' },
     'background-size': 'auto',
     'background-position': '0% 0%',
     'background-repeat': 'repeat',
@@ -330,17 +430,11 @@ const default_konjac_css = {
   'customContainer': ''
 }
 
-async function callbackground(message) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, function (response) {
-      resolve(response)
-    });
-  })
-}
+
 
 const default_data = {
   customClip: {
-    uid: '',
+    id: '',
     page: 0,
     shape: 'path',
     style: {
@@ -360,7 +454,7 @@ const default_data = {
     currentLineIndex: null,
   },
   svgData: {
-    uid: '',
+    id: '',
     page: 0,
     style: {
       left: "0px",
@@ -374,15 +468,16 @@ const default_data = {
       y: 0,
     },
     defaultStyle: {
-      fill: { rgba: { r: 0, g: 255, b: 255, a: 1 } },
+      fill: { rgba: { r: 255, g: 255, b: 255, a: 1 } },
       'stroke': { rgba: { r: 255, g: 255, b: 255, a: 1 } },
-      'stroke-width': 4,
+      'stroke-width': 0,
     },
     newNode: null,
     currentNode: null,
     preLine: null,
     currentLine: null,
     currentLineIndex: null,
+    addNewPoint:'',
     shape: '',
     move: { x: 0, y: 0 },
     status: {
@@ -397,34 +492,48 @@ const default_data = {
 
 export default {
   components: {
-    richTextEditorMenu: richTextEditorMenu,
-    tabsText: tabsText,
-
-    customClipView: customClipView,
-    drawClipShapeMenu: drawClipShapeMenu,
-    clipItemMenu: clipItemMenu,
-
-    svgEditorView: svgEditorView,
-    svgDrawMenu: svgDrawMenu,
-    svgItemMenu: svgItemMenu,
-    vuedraggable: vuedraggable,
-    tips: tips,
-    baseinfo: baseinfo,
+    richTextEditorMenu,
+    tabsText,
+    customClipView,
+    drawClipShapeMenu,
+    clipItemMenu,
+    svgEditorView,
+    svgDrawMenu,
+    svgItemMenu,
+    vuedraggable,
+    tips,
+    baseinfo,
     editITem,
-    setting
+    setting,
+    snippets,
+    labelPlus,
+
   },
   data() {
     this.tool = tool
+    this.default_konjac_css = default_konjac_css
     return {
-      setting: {
+      snippets: [],
+      snippetsSeleted: '',
+      cursor: '',
+      focusItem: '',
+      mousePositon: {
 
       },
+      setting: { autoSave: true, viewMode: 'page', viewPage: 1, viewIndex: 1 },
       saved: false,
       visible: {
         presetStyleTitle: false,
+        snippets: false,
       },
       title: {
-        presetStyleTitle: ''
+        presetStyleTitle: '',
+        snippets: '',
+      },
+      menuPosition: {
+        display: 'none',
+        left: '0px',
+        top: '0px'
       },
       process: [],
       data: {
@@ -443,11 +552,15 @@ export default {
         syncTime: '',
         saveTime: '',
       },
+      selectedPresetStyle: '',
+      currentPresetStyle: '',
       imageSource: [],
       totalSourceLength: 0,
+      showPage: {},
       basetool: '',
       zoom: 1,
       filePage: 0,
+      currentPage: 0,
       customClip: {},
       presetStyle: [],
       autosave: null,
@@ -468,7 +581,7 @@ export default {
         top: '0px'
       },
       svgData: {},
-
+      selectedList: []
     }
   },
   filters: {
@@ -505,7 +618,7 @@ export default {
 
   // },
   created() {
-    document.oncontextmenu = () => { this.cleanSelection(); return false; }
+    document.oncontextmenu = (e) => { this.cleanSelection(e); return false; }
     document.onkeydown = this.keyDown
     chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       if (sender.url) { return }
@@ -525,13 +638,7 @@ export default {
     this.dataReset('customClip')
     this.dataReset('svgData')
     this.getSetting()
-    // this.loadImageSource({
-    //   pages: [{
-    //     src: "https://img0.baidu.com/it/u=4177142990,590745591&fm=26&fmt=auto",
-    //     // width: 820,
-    //     // height: 1200
-    //   }]
-    // })
+    this.getSnippets()
   },
   watch: {
     basetool(val) {
@@ -544,8 +651,14 @@ export default {
       }
     },
     selectedItem(val, old) {
-      if (old && old.type == 'text') {
+      if (val != old && old && old.type == 'text') {
         this.saveItem(old)
+      }
+      if (val && val.type == 'text' && old && old.type == 'text') {
+        this.currentPresetStyle = ''
+      }
+      if (old && !val) {
+        this.selectedList = []
       }
     },
     data: {
@@ -557,12 +670,117 @@ export default {
         chromeApi.savelocal({ 'editor-config': val })
       },
       deep: true,
-    }
+    },
   },
   methods: {
+    async getSnippets() {
+      let res = await chromeApi.getlocal('snippets')
+      this.snippets = res ? JSON.parse(res) : []
+    },
+    savesnippets() {
+      if (!this.title.snippets) { this.$message.info('请输入预设文本名称'); return }
+      let item = this.data.body[this.selectIndex.page].item[this.selectIndex.index]
+      this.saveItem(this.selectedItem)
+      let snippet = {
+        id: uuidv4(),
+        title: this.title.snippets,
+        value: JSON.parse(JSON.stringify(item))
+      }
+      this.snippets.push(snippet)
+      chromeApi.savelocal({ 'snippets': JSON.stringify(this.snippets) })
+      this.visible.snippets = false
+      this.title.snippets = ''
+    },
+    deletesnippets() {
+      let index = this.snippets.findIndex(ele => ele.id == this.snippetsSeleted)
+      if (index < 0) { return }
+      this.$confirm({
+        width: 300,
+        content: `删除 [${this.snippets[index].title}] 预设文本?`,
+        onOk: async () => {
+          this.snippets.splice(index, 1)
+          chromeApi.savelocal({ 'snippets': JSON.stringify(this.snippets) })
+        },
+        okText: '确定',
+        cancelText: '取消',
+      })
+    },
+    fitHeight() {
+      let img = document.getElementById(`image-${this.currentPage}`)
+      this.zoom = Math.floor((window.innerHeight - 75) / img.height * 100) / 100
+      this.$forceUpdate()
+    },
+    viewModeInit() {
+      for (let index = 0; index < this.totalSourceLength; index++) {
+        this.showPage[index] = this.setting.viewMode == 'scroll'
+      }
+      if (this.currentPage > this.totalSourceLength - 1) {
+        this.currentPage = 0
+      }
+      if (this.setting.viewMode == 'page') {
+        if (this.setting.viewPage == 1) {
+          if (this.showPage.hasOwnProperty(this.currentPage)) { this.showPage[this.currentPage] = true }
+        } else {
+          if (this.setting.viewIndex == 2) {
+            if (this.currentPage % 2 == 1) { this.currentPage-- }
+            if (this.showPage.hasOwnProperty(this.currentPage)) { this.showPage[this.currentPage] = true }
+            if (this.showPage.hasOwnProperty(this.currentPage + 1)) { this.showPage[this.currentPage + 1] = true }
+          } else {
+            if (this.currentPage == 0) {
+              if (this.showPage.hasOwnProperty(this.currentPage)) { this.showPage[this.currentPage] = true }
+            } else {
+              if (this.currentPage % 2 == 0) { this.currentPage-- }
+              if (this.showPage.hasOwnProperty(this.currentPage)) { this.showPage[this.currentPage] = true }
+              if (this.showPage.hasOwnProperty(this.currentPage + 1)) { this.showPage[this.currentPage + 1] = true }
+            }
+          }
+        }
+      }
+      this.$forceUpdate()
+    },
+    pagination(target) {
+      if (this.setting.viewMode == 'scroll') { return }
+      if (target < 1) { target = 1 }
+      if (target > this.totalSourceLength) { target = this.totalSourceLength }
+      target--
+      if (this.setting.viewPage == 1) {
+        for (const key in this.showPage) {
+          this.showPage[key] = target * 1 == key * 1
+        }
+        this.currentPage = target
+        this.$forceUpdate()
+        return
+      }
+
+      if (this.setting.viewIndex == 2) {
+        if (target % 2 == 1) { target-- }
+        for (const key in this.showPage) {
+          this.showPage[key] = (target == key * 1) || (target + 1 == key * 1)
+        }
+        this.currentPage = target
+        this.$forceUpdate()
+        return
+      }
+
+      if (target == 0) {
+        for (const key in this.showPage) {
+          this.showPage[key] = target == key * 1
+        }
+        this.currentPage = target
+        this.$forceUpdate()
+        return
+      }
+
+      if (target % 2 == 0) { target-- }
+      for (const key in this.showPage) {
+        this.showPage[key] = (target == key * 1) || (target + 1 == key * 1)
+      }
+      this.currentPage = target
+      this.$forceUpdate()
+    },
     async getSetting() {
       let config = await chromeApi.getlocal('editor-config')
-      this.setting = config ? config : { autoSave: true }
+      this.setting = config ? config : { autoSave: true, viewMode: 'page', viewPage: 1, viewIndex: 1 }
       this.autoSave(this.setting.autoSave)
     },
     autoSave(open = true) {
@@ -570,7 +788,7 @@ export default {
         clearInterval(this.autosave)
         this.autosave = setInterval(() => {
           console.log('autoSave   ', new Date)
-          this.saveBody()
+          this.saveBody(true)
         }, 10 * 60 * 1000)
       } else {
         clearInterval(this.autosave)
@@ -591,13 +809,13 @@ export default {
       item.body = filterBody
       return item
     },
-    async saveBody() {
-      if (!this.validateInfo()) { this.$message.warning('译文标题必须在6字节以上'); return }
+    async saveBody(nomessage = false) {
       let item = this.getTranslation(this.data)
-      if (!item) { this.$message.warning('译文无内容'); return }
+      if (!item) { if (!nomessage) { this.$message.warning('译文无内容') }; return }
+      if (!this.validateInfo()) { if (!nomessage) { this.$message.warning('译文标题必须在6字节以上') }; return }
       let ts = await chromeApi.getlocal(`translation-${this.data.local_id}`)
       let { createTime, saveTime, ...res } = ts ? JSON.parse(ts) : {}
-      if (JSON.stringify(item) == JSON.stringify(res)) { this.$message.info('文档未修改'); return }
+      if (JSON.stringify(item) == JSON.stringify(res)) { if (!nomessage) { this.$message.info('文档未修改') }; return }
       this.saved = true
       if (!item.createTime) {
         item.createTime = Date.parse(new Date)
@@ -640,6 +858,7 @@ export default {
       })
       if (this.data.body.length > this.totalSourceLength) {
         this.totalSourceLength = this.data.body.length
+        this.viewModeInit()
       }
     },
     async getPresetStyle() {
@@ -693,9 +912,13 @@ export default {
       })
     },
     setPresetStyle(val) {
+      this.selectedPresetStyle = val
+      this.currentPresetStyle = val
       let item = this.presetStyle.find(ele => ele.id == val)
       if (!item) { return }
       item = JSON.parse(JSON.stringify(item))
+      console.log(val, item.title)
+      console.log(item.style)
       this.$set(this.selectedTextStyle, 'style', item.style.style)
       this.$set(this.selectedTextStyle, 'container', item.style.container)
       this.$set(this.selectedTextStyle, 'background', item.style.background)
@@ -703,6 +926,9 @@ export default {
         this.selectedItem.container = this.getTextStyle('container')
         this.selectedItem.style = this.getTextStyle('style')
         this.selectedItem.background = this.getTextStyle('background')
+        this.batchUpdateList(['style'], this.getTextStyle('style'))
+        this.batchUpdateList(['container'], this.getTextStyle('container'))
+        this.batchUpdateList(['background'], this.getTextStyle('background'))
       }
       this.$forceUpdate()
     },
@@ -713,38 +939,54 @@ export default {
     dataReset(key) {
       this.$set(this, key, JSON.parse(JSON.stringify(default_data[key])))
     },
-
+    selectTool(tool) {
+      this.basetool = tool
+      switch (tool) {
+        case 'text':
+          this.cursor = 'crosshair'
+          this.selectedItem = null
+          let item = this.presetStyle.find(ele => ele.id == this.selectedPresetStyle)
+          if (item) {
+            this.$set(this, 'defaultStyle', JSON.parse(JSON.stringify(item.style)))
+            this.selectedPresetStyle = this.currentPresetStyle = item.id
+          } else {
+            this.$set(this, 'defaultStyle', JSON.parse(JSON.stringify(this.presetStyle[0].style)))
+            this.selectedPresetStyle = this.currentPresetStyle = this.presetStyle[0].id
+          }
+          this.selectedTextStyle = this.defaultStyle
+          break
+        default:
+          this.cursor = 'crosshair'
+          this.selectedItem = null
+          break;
+      }
+    },
     keyDown(e) {
-      if (this.selectedItem) {
-        switch (e.keyCode) {
-          case 46:
-            this.$confirm({
-              title: '确认删除?',
-              okText: '确定',
-              cancelText: '取消',
-              centered: true,
-              width: 350,
-              okType: 'danger',
-              onOk: () => {
-                this.data.body[this.selectIndex.page].item.splice(this.selectIndex.index, 1)
-              },
-              onCancel() { },
-            });
-            break;
-          case 67:
-            if (e.ctrlKey) { this.copyItem = JSON.stringify(this.selectedItem) }
-            break
-          case 86:
-            if (e.ctrlKey && this.copyItem) {
-              let item = JSON.parse(this.copyItem)
-              item.uid = uuidv4()
-              item.top = this.selectedItem.top + 50
-              item.left = this.selectedItem.left + 50
-              this.data.body[this.selectIndex.page].item.push(item)
-              this.copyItem = null
-            }
-            break
-        }
+      switch (e.keyCode) {
+        case 65:
+          if (e.ctrlKey && this.selectedItem && !this.process.length) {
+            this.data.body[this.selectIndex.page].item.forEach(ele => {
+              if (ele != this.selectedItem && !this.selectedList.includes(ele) && !ele.lock) {
+                this.selectedList.push(ele)
+              }
+            })
+          }
+          break
+        case 67:
+          if (e.ctrlKey && this.selectedItem && !this.process.length) { this.copyItem = this.selectedItem }
+          break
+        case 86:
+          if (e.ctrlKey && this.copyItem && this.mousePositon.on && !this.process.length) {
+            let res = this.getOffsetToPage(this.mousePositon.event.target)
+            let item = JSON.parse(JSON.stringify(this.copyItem))
+            item.id = uuidv4()
+            item.left = (res.offset.left + this.mousePositon.event.offsetX) / this.zoom
+            item.top = (res.offset.top + this.mousePositon.event.offsetY) / this.zoom
+            this.data.body[this.mousePositon.page].item.push(item)
+            this.selectItem(item, { page: this.mousePositon.page, index: this.data.body[this.mousePositon.page].item.length - 1 })
+            this.copyItem = null
+          }
+          break
       }
     },
     labelPlus() {
@@ -752,11 +994,16 @@ export default {
       let reader = new FileReader()
       reader.readAsText(file)
       reader.onload = (e) => {
-        let data = e.currentTarget.result
-        let items = data.split(/>+\[.*\]<+/)
+        let items = e.currentTarget.result.split(/>+\[.*\]<+/)
+        let data = []
+        let hasItems = false
         for (let index = 1; index < items.length; index++) {
           const element = items[index];
           let texts = element.split(/-+\[\d+\]-+/g)
+          let bodys = {
+            index: index - 1,
+            item: []
+          }
           if (texts) {
             for (let index2 = 0; index2 < texts.length; index2++) {
               const text = texts[index2];
@@ -764,39 +1011,55 @@ export default {
               let position = text.match(/^\[[0-9,.]+\]/)
               if (position) {
                 let po = position[0].match(/[0-9.]+/g)
-                console.log(index - 1, this.data.body[index - 1], this.imageSource[index - 1])
-                let width, height
-                if (this.data.body[index - 1] && this.data.body[index - 1].width && this.data.body[index - 1].height) {
-                  width = this.data.body[index - 1].width
-                  height = this.data.body[index - 1].height
-                } else if (this.imageSource[index - 1] && this.imageSource[index - 1].width && this.imageSource[index - 1].height) {
-                  width = this.imageSource[index - 1].width
-                  height = this.imageSource[index - 1].height
-                }
-                if (!(width && height)) { continue }
-                let item = {
-                  uid: uuidv4(),
-                  type: 'text',
-                  show: true,
-                  left: width * (po[0] * 1) / this.zoom,
-                  top: height * (po[1] * 1) / this.zoom,
-                  container: { width: '100px', height: '60px' },
-                  body: text.replace(/^\[[0-9,.]+\]/, ''),
-                  style: {},
-                  background: {},
-                  customStyle: '',
-                  customBackground: '',
-                  customContainer: '',
-                  quote: {}
-                }
-                this.data.body[index - 1].item.push(item)
+                bodys.item.push({
+                  width: po[0] * 1,
+                  height: po[1] * 1,
+                  text: text.replace(/^\[[0-9,.]+\]/, '').trim()
+                })
+                hasItems = true
               }
             }
+            data.push(bodys)
           }
         }
-        this.$message.success('已导入')
+        if (hasItems) { this.$refs.labelPlus.showModal(data) }
         this.$refs.fileText.value = ''
       }
+    },
+    loadLabelPlus(data, style = {}) {
+      let itemstyle = this.getTextStyle('style', style),
+        itemContainer = this.getTextStyle('container', style),
+        itemBackground = this.getTextStyle('background', style)
+      data.forEach((ele => {
+        let width, height
+        if (this.data.body[ele.index] && this.data.body[ele.index].width && this.data.body[ele.index].height) {
+          width = this.data.body[ele.index].width
+          height = this.data.body[ele.index].height
+        } else if (this.imageSource[ele.index] && this.imageSource[ele.index].width && this.imageSource[ele.index].height) {
+          width = this.imageSource[ele.index].width
+          height = this.imageSource[ele.index].height
+        }
+        if (width && height) {
+          ele.item.forEach(element => {
+            let item = {
+              id: uuidv4(),
+              type: 'text',
+              show: true,
+              left: width * element.width * this.zoom,
+              top: height * element.height * this.zoom,
+              container: JSON.parse(JSON.stringify(itemContainer)),
+              body: element.text,
+              style: JSON.parse(JSON.stringify(itemstyle)),
+              background: JSON.parse(JSON.stringify(itemBackground)),
+              customStyle: '',
+              customBackground: '',
+              customContainer: '',
+              quote: []
+            }
+            this.data.body[ele.index].item.push(item)
+          })
+        }
+      }))
     },
     loadFile(e) {
       let file = this.$refs.file.files[0]
@@ -820,7 +1083,7 @@ export default {
           return
         }
         let item = {
-          uid: uuidv4(),
+          id: uuidv4(),
           type: 'svg',
           show: true,
           body: svg.innerHTML,
@@ -853,24 +1116,52 @@ export default {
         this.$refs.file.value = ''
       }
     },
-    async downloadManga() {
-      this.selectedItem = null
-      let items = document.getElementsByClassName('workspace-page')
-      const zip = new JSZip();
-      this.$message.loading({ content: `下载中 0/${items.length}`, key: 'loading' });
-      this.setMargin()
-      for (let index = 0; index < items.length; index++) {
-        let node = items[index]
-        let dataUrl = await domtoimage.toPng(node)
-        zip.file(`${index + 1}.png`, dataUrl.replace(/^data:image\/(png|jpg);base64,/, ''), { base64: true });
-        this.$message.loading({ content: `下载中 ${index + 1}/${items.length}`, key: 'loading' });
+    async downloadLabelPlus() {
+      let text = `1,0\r\n-\r\n框内\r\n框外\r\n-\r\n${this.data.message}\r\n`
+      let div = document.createElement('div')
+      for (let index = 0; index < this.data.body.length; index++) {
+        let element = this.data.body[index];
+        text += `\r\n>>>>>>>>[${index + 1}.png]<<<<<<<<\r\n`
+        for (let i = 0; i < element.item.length; i++) {
+          let item = element.item[i];
+          if (item.type == 'text') {
+            div.innerHTML = item.body
+            text += `----------------[${i + 1}]----------------[${(item.left / element.width).toFixed(3)},${(item.top / element.height).toFixed(3)},1]\r\n${div.innerText.trim()}\r\n\r\n`
+          }
+        }
       }
-      zip.generateAsync({ type: "blob" }).then((content) => {
-        saveAs(content, `${this.data.title}.zip`);
-        this.$message.success({ content: `下载完成`, key: 'loading' });
-      });
-      this.setMargin(false)
-
+      let filename = `${this.data.title}.txt`
+      var pom = document.createElement('a');
+      pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      pom.setAttribute('download', filename);
+      pom.click();
+    },
+    async downloadManga() {
+      try {
+        for (const key in this.showPage) { this.showPage[key] = true }
+        this.$forceUpdate()
+        this.selectedItem = null
+        let items = document.getElementsByClassName('workspace-page')
+        const zip = new JSZip();
+        this.$message.loading({ content: `处理中 0/${items.length}`, key: 'loading', duration: 0 });
+        this.setMargin()
+        for (let index = 0; index < items.length; index++) {
+          let node = items[index]
+          let dataUrl = await domtoimage.toPng(node)
+          zip.file(`${index + 1}.png`, dataUrl.replace(/^data:image\/(png|jpg);base64,/, ''), { base64: true });
+          this.$message.loading({ content: `处理中 ${index + 1}/${items.length}`, key: 'loading', duration: 0 });
+        }
+        this.viewModeInit()
+        this.$message.loading({ content: `下载中···}`, key: 'loading', duration: 0 });
+        zip.generateAsync({ type: "blob" }).then((content) => {
+          saveAs(content, `${this.data.title}.zip`);
+          this.$message.success({ content: `下载完成`, key: 'loading', duration: 0 });
+        });
+        this.setMargin(false)
+      } catch (error) {
+        this.$message.error({ content: '处理失败', key: 'loading', duration: 3, })
+        this.viewModeInit()
+      }
     },
     setMargin(reset = true) {
       let elements = document.getElementsByClassName('default_konjac_css_style')
@@ -885,20 +1176,29 @@ export default {
       }
     },
     async downloadSource() {
-      this.selectedItem = null
-      let items = document.getElementsByClassName('workspace-img')
-      const zip = new JSZip();
-      this.$message.loading({ content: `下载中 0/${items.length}`, key: 'loading' });
-      for (let index = 0; index < items.length; index++) {
-        let node = items[index]
-        let dataUrl = await domtoimage.toPng(node)
-        zip.file(`${index + 1}.png`, dataUrl.replace(/^data:image\/(png|jpg);base64,/, ''), { base64: true });
-        this.$message.loading({ content: `下载中 ${index + 1}/${items.length}`, key: 'loading' });
+      for (const key in this.showPage) { this.showPage[key] = true }
+      try {
+        this.$forceUpdate()
+        this.selectedItem = null
+        let items = document.getElementsByClassName('workspace-img')
+        const zip = new JSZip();
+        this.$message.loading({ content: `处理中 0/${items.length}`, key: 'loading', duration: 0 });
+        for (let index = 0; index < items.length; index++) {
+          let node = items[index]
+          let dataUrl = await domtoimage.toPng(node)
+          zip.file(`${index + 1}.png`, dataUrl.replace(/^data:image\/(png|jpg);base64,/, ''), { base64: true });
+          this.$message.loading({ content: `处理中 ${index + 1}/${items.length}`, key: 'loading', duration: 0 });
+        }
+        this.viewModeInit()
+        this.$message.loading({ content: `下载中···}`, key: 'loading', duration: 0 });
+        zip.generateAsync({ type: "blob" }).then((content) => {
+          saveAs(content, `${this.data.title}.zip`);
+          this.$message.success({ content: `下载完成`, key: 'loading', duration: 0 });
+        });
+      } catch (error) {
+        this.$message.error({ content: '处理失败', key: 'loading', duration: 3, })
+        this.viewModeInit()
       }
-      zip.generateAsync({ type: "blob" }).then((content) => {
-        saveAs(content, `${this.data.title}.zip`);
-        this.$message.success({ content: `下载完成`, key: 'loading' });
-      });
     },
 
     setData(args = [], value) {
@@ -916,27 +1216,52 @@ export default {
       for (let index = 0; index < args.length; index++) { that = that[args[index]]; }
       that(data)
     },
+    lostBasetool() {
+      this.basetool = ''
+      this.cursor = ''
+      this.currentPresetStyle = ''
+    },
     pageClickWatch(e, pageIndex) {
       switch (this.basetool) {
         case 'text':
           this.basetool = ''
           this.selectedItem = null
+          this.cursor = ''
+          this.currentPresetStyle = ''
           this.createNewText(e, pageIndex); break;
         case 'clip-path':
           this.basetool = ''
+          this.cursor = ''
           this.selectedItem = null
           this.createNewClipPath(e, pageIndex); break;
         case 'svg':
           this.basetool = ''
+          this.cursor = ''
           this.selectedItem = null
           this.createNewSvg(e, pageIndex)
           break
+        case 'snippets':
+          if (!e.shiftKey) { this.basetool = '' }
+          if (this.snippetsSeleted) { this.createNewsNippets(e, pageIndex) }
+          break
+      }
+    },
+    createNewsNippets(event, pageIndex) {
+      let snippets = this.snippets.find(ele => ele.id == this.snippetsSeleted)
+      if (snippets) {
+        let res = this.getOffsetToPage(event.target)
+        let item = JSON.parse(JSON.stringify(snippets.value))
+        item.id = uuidv4()
+        item.left = (res.offset.left + event.offsetX) / this.zoom,
+          item.top = (res.offset.top + event.offsetY) / this.zoom,
+          this.data.body[pageIndex * 1].item.push(item)
       }
     },
     pageMouseDownWatch(e, pageIndex) {
       switch (this.basetool) {
         case 'clip-rect':
           this.basetool = ''
+          this.cursor = ''
           this.selectedItem = null
           this.createNewClipRect(e, pageIndex)
           break;
@@ -944,9 +1269,47 @@ export default {
           break;
       }
     },
-    cleanSelection() {
-      if (this.basetool) { this.basetool = '' }
-      if (this.selectedItem) { this.selectedItem = null }
+    cleanSelection(e) {
+      let rightmouse = e.path.find(ele => ele._prevClass && ele._prevClass.includes('rightmouse'))
+      if (rightmouse) {
+        this.menuPosition.type = rightmouse.dataset.type
+        switch (rightmouse.dataset.type) {
+          case 'item':
+            if (this.basetool) { this.basetool = ''; this.cursor = '' }
+            let item = this.data.body[rightmouse.dataset.page * 1].item[rightmouse.dataset.index * 1]
+            if (this.selectedItem != item) {
+              this.selectItem(item, { page: rightmouse.dataset.page * 1, index: rightmouse.dataset.index * 1 })
+              this.scrollInto(rightmouse.dataset.page * 1)
+            }
+            break;
+          case 'snippets':
+            this.snippetsSeleted = rightmouse.dataset.id
+            break
+          default:
+            break;
+        }
+        this.menuPosition.display = 'block'
+        this.menuPosition.left = e.pageX + 'px'
+        this.menuPosition.top = e.pageY + 'px'
+
+        this.$nextTick(() => {
+          let contextmenu = document.getElementById('contextmenu').getBoundingClientRect()
+          if ((e.pageX + contextmenu.width) > window.innerWidth) { this.menuPosition.left = window.innerWidth - contextmenu.width - 5 + 'px' }
+          if ((e.pageY + contextmenu.height) > window.innerHeight) { this.menuPosition.top = window.innerHeight - contextmenu.height - 5 + 'px' }
+        })
+        document.addEventListener('mousedown', this.hiddenMenu)
+      } else {
+        this.menuPosition.display = 'none'
+        if (this.basetool) { this.basetool = '', this.cursor = '' }
+        if (this.selectedItem) { this.selectedItem = null }
+      }
+    },
+    hiddenMenu(e) {
+      let mune = e.path.find(ele => ele.id == 'contextmenu')
+      if (!mune) {
+        document.removeEventListener('mousedown', this.hiddenMenu)
+        this.menuPosition.display = 'none'
+      }
     },
     getOffsetToPage(element, offset = { left: 0, top: 0 }) {
       if (element.dataset && element.dataset.type == 'page') {
@@ -959,45 +1322,54 @@ export default {
       }
     },
     editTextItem(item, index) {
-      let textEle = document.getElementById('textEditor-' + item.uid)
+      if (item.lock) { return }
+      let textEle = document.getElementById('textEditor-' + item.id)
       textEle.contentEditable = 'true'
-      textEle.style['userSelect'] = 'text'
+      textEle.style['userSelect'] = 'auto'
       textEle.focus()
       this.selectItem(item, index)
-      let res = this.getOffsetToPage(textEle)
-      this.textEditorMenuPositon = {
-        display: 'block',
-        left: res.offset.left + res.page.offsetLeft * this.zoom + 'px',
-        top: res.offset.top + res.page.offsetTop * this.zoom + 'px',
+      let ele = textEle.getBoundingClientRect()
+
+      this.textEditorMenuPositon = { display: 'block', }
+      if (ele.right + 450 + 280 > window.innerWidth) {
+        this.textEditorMenuPositon.left = (window.innerWidth - 450 - 280) * this.zoom + 'px'
+      } else {
+        this.textEditorMenuPositon.left = ele.left * this.zoom + 'px'
       }
-      this.process.push('Edit')
+      if (ele.top < 50) {
+        this.textEditorMenuPositon.top = (ele.bottom + 70) * this.zoom + 'px'
+      } else { this.textEditorMenuPositon.top = ele.top * this.zoom + 'px' }
+
+      if (!this.process.includes('Edit')) { this.process.push('Edit') }
     },
     saveTextItem(event, item) {
-      let body = event.target
-      let saveIt = (e) => {
-        if (e.target == body) {
-          document.removeEventListener('click', saveIt)
-          return
-        }
-        let richTextEditorMenu = e.path.find(ele => ele.id == 'richTextEditorMenu')
-        let editMenu = e.path.find(ele => ele.id == 'workspace-param')
-        let params = e.path.find(ele => ele.dataset && ele.dataset.type == 'params')
-        if (!(richTextEditorMenu || editMenu || params)) {
-          this.saveItem(item)
-          document.removeEventListener('click', saveIt)
-        }
+      this.focusItem = ''
+      document.removeEventListener('click', this.listenClickOutside)
+      document.addEventListener('click', this.listenClickOutside)
+    },
+    listenClickOutside(e) {
+      let richTextEditorMenu = e.path.find(ele => ele.id == 'richTextEditorMenu')
+      let editMenu = e.path.find(ele => ele.id == 'workspace-param')
+      let params = e.path.find(ele => ele.dataset && ele.dataset.type == 'params')
+      let selfEditor = e.path.find(ele => ele.id && ele.id == `textEditor-${this.selectedItem.id}`)
+      if (!(richTextEditorMenu || editMenu || params || selfEditor)) {
+        this.selectedItem = null
+        document.removeEventListener('click', this.listenClickOutside)
       }
-      document.addEventListener('click', saveIt)
     },
     saveItem(item) {
-      let textEle = document.getElementById('textEditor-' + item.uid)
+      let textEle = document.getElementById('textEditor-' + item.id)
       if (!textEle) { return }
-      item.body = textEle.innerHTML
+      console.log('before', textEle.innerHTML, textEle.innerHTML.length)
+      item.body = this.cleanHTMLSPAN(textEle.innerHTML, item.style)
+      console.log('after', item.body, item.body.length)
+      console.log('saveItem')
       textEle.contentEditable = 'false'
       textEle.style['userSelect'] = 'none'
+      this.$forceUpdate()
       if (this.selectedItem == item) { this.selectedItem = null }
       this.textEditorMenuPositon.display = 'none'
-      this.process.pop()
+      if (this.process.includes('Edit')) { this.process.pop() }
     },
     loadImageSource(msg) {
       for (const key in msg.info) {
@@ -1034,16 +1406,22 @@ export default {
       }
       if (this.imageSource.length > this.totalSourceLength) {
         this.totalSourceLength = this.imageSource.length
+        this.viewModeInit()
       }
     },
     addSVGItem() {
       let svgEditor = document.getElementById('svgEditor-body')
+      if (!svgEditor.innerHTML) {
+        this.process = []
+        this.svgData.status.show = false
+        return
+      }
       let box = svgEditor.getBBox()
       for (const key in box) {
         box[key] = box[key].toFixed(0) * 1
       }
-      if (this.svgData.uid) {
-        let item = this.data.body[this.svgData.page].item.find(ele => ele.uid == this.svgData.uid)
+      if (this.svgData.id) {
+        let item = this.data.body[this.svgData.page].item.find(ele => ele.id == this.svgData.id)
         item.body = svgEditor.innerHTML
         item.left = box.x + this.svgData.offset.x
         item.top = box.y + this.svgData.offset.y
@@ -1054,7 +1432,7 @@ export default {
         item.show = true
       } else {
         let item = {
-          uid: uuidv4(),
+          id: uuidv4(),
           type: 'svg',
           show: true,
           body: svgEditor.innerHTML,
@@ -1075,6 +1453,7 @@ export default {
       this.svgData.status.show = false
     },
     reeditSVG(event, item) {
+      if (item.lock) { return }
       let res = this.getOffsetToPage(event.target)
       this.dataReset('svgData')
       Object.assign(this.svgData.style, {
@@ -1084,7 +1463,7 @@ export default {
         height: res.page.scrollHeight + 'px',
       })
       this.svgData.page = res.page.dataset.index * 1
-      this.svgData.uid = item.uid
+      this.svgData.id = item.id
       this.svgData.body = item.body
       this.svgData.offset = {
         x: item.left - item.translate.x,
@@ -1118,13 +1497,14 @@ export default {
           res = await this.getImageByShapeRect()
         }
         this.customClip.status.show = false
-        if (this.customClip.uid) {
-          let clip = this.data.body[this.customClip.page].item.find(ele => ele.uid == this.customClip.uid)
+        if (this.customClip.id) {
+          let clip = this.data.body[this.customClip.page].item.find(ele => ele.id == this.customClip.id)
           Object.assign(clip, res)
-          this.customClip.uid = ''
+          this.customClip.id = ''
         } else {
-          res.uid = uuidv4()
+          res.id = uuidv4()
           res.show = true
+          res.lock = false
           this.data.body[this.customClip.page].item.push(res)
         }
         this.process = []
@@ -1134,6 +1514,7 @@ export default {
       }
     },
     reeditClipShape(e, item) {
+      if (item.lock) { return }
       let page = e.path.find(ele => ele.dataset && ele.dataset.type && ele.dataset.type == 'page')
       if (page) {
         this.dataReset('customClip')
@@ -1145,7 +1526,7 @@ export default {
         })
         item.top = item.position.y
         item.left = item.position.x
-        this.customClip.uid = item.uid
+        this.customClip.id = item.id
         this.customClip.page = page.dataset.index * 1
         this.customClip.shape = item.shape
         switch (item.shape) {
@@ -1192,6 +1573,296 @@ export default {
           })
         })
       })
+    },
+    setItemIndex(type) {
+      switch (type) {
+        case 'up':
+          if (this.selectIndex.index + 1 != this.data.body[this.selectIndex.page].item.length) {
+            this.data.body[this.selectIndex.page].item[this.selectIndex.index] = this.data.body[this.selectIndex.page].item.splice(this.selectIndex.index + 1, 1, this.data.body[this.selectIndex.page].item[this.selectIndex.index])[0];
+            this.selectIndex.index++
+          }
+          break;
+        case 'down':
+          if (this.selectIndex.index != 0) {
+            this.data.body[this.selectIndex.page].item[this.selectIndex.index] = this.data.body[this.selectIndex.page].item.splice(this.selectIndex.index - 1, 1, this.data.body[this.selectIndex.page].item[this.selectIndex.index])[0];
+            this.selectIndex.index--
+          }
+          break
+        case 'top':
+          if (this.selectIndex.index + 1 != this.data.body[this.selectIndex.page].item.length) {
+            this.data.body[this.selectIndex.page].item.push(
+              this.data.body[this.selectIndex.page].item.splice(this.selectIndex.index, 1)[0]
+            )
+            this.selectIndex.index = this.data.body[this.selectIndex.page].item.length - 1
+          }
+          break
+        case 'bottom':
+          if (this.selectIndex.index != 0) {
+            this.data.body[this.selectIndex.page].item.unshift(
+              this.data.body[this.selectIndex.page].item.splice(this.selectIndex.index, 1)[0]
+            )
+            this.selectIndex.index = 0
+          }
+          break
+        default:
+          break;
+      }
+    },
+
+    async replaceText(replace) {
+      if (!replace.search) { return }
+      let count = 0
+      switch (replace.target) {
+        case '0':
+          if (this.selectedItem) {
+            let res = this.replaceItem(this.selectedItem, replace)
+            count += res
+          }
+          break;
+        case '1':
+          if (this.selectedItem) {
+            let res = this.replaceItem(this.selectedItem, replace)
+            count += res
+          }
+          for (let index = 0; index < this.selectedList.length; index++) {
+            let r = this.replaceItem(this.selectedList[index], replace)
+            count += r
+          }
+          break
+        case '2':
+          for (let index = 0; index < this.data.body.length; index++) {
+            let body = this.data.body[index]
+            for (let index2 = 0; index2 < body.item.length; index2++) {
+              const item = body.item[index2];
+              let r = this.replaceItem(item, replace)
+              count += r
+            }
+          }
+          break
+        default:
+          break;
+      }
+      if (replace.replace) {
+        this.$message.success(`成功替换文本 ${count} 处`)
+      } else {
+        this.$message.info(`找到符合条件文本 ${count} 处`)
+      }
+    },
+
+
+
+    replaceItem(item, replace) {
+      if (item.type != 'text') { return 0 }
+      let div = document.createElement('div')
+      div.innerHTML = item.body
+      if (div.innerText.indexOf(replace.search) < 0) { return 0 }
+
+      let indexList = []
+      let startPosition = 0
+      for (let i = 0; i < div.innerText.length; i++) {
+        let index = div.innerText.indexOf(replace.search, startPosition)
+        if (index < 0) { break }
+        indexList.push({ start: index, end: index + replace.search.length, nodes: [] })
+        startPosition += (index + replace.search.length)
+      }
+      let textNodes = this.getAllChildNodes(div)
+      let currentPosition = 0
+      for (let index = 0; index < textNodes.length; index++) {
+        const element = textNodes[index];
+        let start = currentPosition
+        let end = currentPosition + element.nodeValue.length
+        indexList.forEach(ele => {
+          if ((ele.start <= start && start < ele.end) ||
+            (ele.start < end && end <= ele.end) ||
+            (start <= ele.start && ele.end <= end) ||
+            (start >= ele.start && end <= ele.end)
+          ) {
+            ele.nodes.push({ start: start, end: end, node: element })
+          }
+        })
+        currentPosition += element.nodeValue.length
+      }
+
+      indexList = indexList.filter(ele => {
+        if (ele.nodes.length > 1) {
+          let i1div = this.getParentNodeToDIV(ele.nodes[0].node)
+          for (let index = 1; index < ele.nodes.length; index++) {
+            const divf = this.getParentNodeToDIV(ele.nodes[index].node)
+            if (i1div != divf) { return false }
+          }
+          return true
+        } else {
+          return true
+        }
+      })
+
+      if (!replace.replace && indexList.length) {
+        this.createSelectRange(item, replace.search)
+      }
+
+      if (!replace.replace || !indexList.length) { return indexList.length }
+      for (let i1 = 0; i1 < indexList.length; i1++) {
+        const element = indexList[indexList.length - 1 - i1];
+        for (let i2 = 0; i2 < element.nodes.length; i2++) {
+          const textNode = element.nodes[element.nodes.length - 1 - i2];
+          let start = textNode.start > element.start ? textNode.start : element.start,
+            end = textNode.end > element.end ? element.end : textNode.end,
+            preText = textNode.node.nodeValue.slice(0, start - textNode.start),
+            nextText = textNode.node.nodeValue.slice(end - textNode.start)
+
+          textNode.node.nodeValue = preText
+
+          if (nextText) { textNode.node.after(document.createTextNode(nextText)) }
+
+          if (i2 == element.nodes.length - 1 && replace.value) {
+            if (Object.keys(replace.style).length) {
+              let span = document.createElement('span')
+              for (const key in replace.style) { span.style[key] = replace.style[key] }
+              span.innerText = replace.value
+              textNode.node.after(span)
+            } else {
+              textNode.node.nodeValue += replace.value
+            }
+          }
+        }
+      }
+
+      item.body = this.cleanHTMLSPAN(div.innerHTML, item.style)
+      console.log(div.innerHTML.length, item.body.length)
+      return indexList.length
+    },
+    createSelectRange(item, value) {
+      let div = document.getElementById(`textEditor-${item.id}`)
+      if (!div) { return }
+      div.style['userSelect'] = 'auto'
+      let indexList = []
+      let startPosition = 0
+      for (let i = 0; i < div.innerText.length; i++) {
+        let index = div.innerText.indexOf(value, startPosition)
+        if (index < 0) { break }
+        indexList.push({ start: index, end: index + value.length, nodes: [] })
+        startPosition += (index + value.length)
+      }
+      let textNodes = this.getAllChildNodes(div)
+      let currentPosition = 0
+      for (let index = 0; index < textNodes.length; index++) {
+        const element = textNodes[index];
+        let start = currentPosition
+        let end = currentPosition + element.nodeValue.length
+        indexList.forEach(ele => {
+          if ((ele.start <= start && start < ele.end) ||
+            (ele.start < end && end <= ele.end) ||
+            (start <= ele.start && ele.end <= end) ||
+            (start >= ele.start && end <= ele.end)
+          ) {
+            ele.nodes.push({ start: start, end: end, node: element })
+          }
+        })
+        currentPosition += element.nodeValue.length
+      }
+
+      indexList = indexList.filter(ele => {
+        if (ele.nodes.length > 1) {
+          let i1div = this.getParentNodeToDIV(ele.nodes[0].node)
+          for (let index = 1; index < ele.nodes.length; index++) {
+            const divf = this.getParentNodeToDIV(ele.nodes[index].node)
+            if (i1div != divf) { return false }
+          }
+          return true
+        } else {
+          return true
+        }
+      })
+
+
+      let selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        selection.removeAllRanges();
+      }
+
+
+
+      // for (let i1 = 0; i1 < indexList.length; i1++) {
+      const element = indexList[0];
+
+      let startNode = element.nodes[0]
+      let endNode = element.nodes[element.nodes.length - 1]
+
+      let start = (startNode.start > element.start ? startNode.start : element.start) - startNode.start,
+        end = (endNode.end > element.end ? element.end : endNode.end) - endNode.start
+      selection.setBaseAndExtent(startNode.node, start, endNode.node, end)
+
+      // }
+
+    },
+    getParentNodeToDIV(node) {
+      if (!node.parentElement) {
+        return node
+      }
+      if (node.parentElement.nodeName == 'DIV') {
+        return node.parentElement
+      } else {
+        return this.getParentNodeToDIV(node.parentElement)
+      }
+    },
+
+    cleanHTMLSPAN(html = '', style = {}) {
+      let div = document.createElement('div')
+      div.className = 'default_konjac_css_style'
+      document.getElementById('cleanArea').appendChild(div)
+      for (const key in style) { div.style[key] = style[key] }
+      html = html.replace(/\u200b/g, '')
+      div.innerHTML = html
+      let span = this.getAllChildNodes(div, 'SPAN')
+      span = span.filter(ele => {
+        if (!ele.innerText) { ele.remove() }
+        return ele.innerText
+      })
+      for (let index = 0; index < span.length; index++) {
+        const element = span[span.length - 1 - index];
+        if (element.parentElement.nodeName == 'SPAN' && element.parentElement.innerText == element.innerText) {
+          for (let index = 0; index < element.style.length; index++) {
+            element.parentElement.style[element.style[index]] = element.style[element.style[index]]
+          }
+          element.parentElement.appendChild(document.createTextNode(element.innerText))
+          element.remove()
+        } else if (element.parentElement) {
+          let deleteStyle = []
+          let parentElementStyle = window.getComputedStyle(element.parentElement, null)
+          for (let index = 0; index < element.style.length; index++) {
+            if (parentElementStyle[tool.toCamelCase(element.style[index])] == element.style[element.style[index]]) { deleteStyle.push(element.style[index]) }
+          }
+          deleteStyle.forEach(ele => { element.style[ele] = null })
+          if (!element.style.length) {
+            element.after(document.createTextNode(element.innerText))
+            element.remove()
+          }
+        }
+      }
+      div.remove()
+      return div.innerHTML
+    },
+    getAllChildNodes(node, type = '#text') {
+      let collection = []
+      for (let index = 0; index < node.childNodes.length; index++) {
+        const element = node.childNodes[index];
+        switch (element.nodeName) {
+          case type:
+            collection.push(element)
+            if (node.childNodes && node.childNodes.length) {
+              let res = this.getAllChildNodes(element, type)
+              collection = collection.concat(res)
+            }
+            break;
+          default:
+            if (node.childNodes && node.childNodes.length) {
+              let res = this.getAllChildNodes(element, type)
+              collection = collection.concat(res)
+            }
+            break;
+        }
+      }
+      return collection
     },
     async getImageByShapePath() {
       if (this.customClip.points.length < 3) { ; return Promise.reject('至少3点以上') }
@@ -1288,7 +1959,7 @@ export default {
     createNewText(event, pageIndex) {
       let res = this.getOffsetToPage(event.target)
       let item = {
-        uid: uuidv4(),
+        id: uuidv4(),
         type: 'text',
         show: true,
         left: (res.offset.left + event.offsetX) / this.zoom,
@@ -1309,7 +1980,7 @@ export default {
     },
     deleteItem(pageIndex, itemIndex) {
       this.$confirm({
-        title: '确认删除该项?',
+        title: `确认删除元素${this.selectedList.length ? ` × ${this.selectedList.length + 1}` : ''}?`,
         okText: '确定',
         cancelText: '取消',
         centered: true,
@@ -1320,138 +1991,219 @@ export default {
             this.selectedItem = null
           }
           this.data.body[pageIndex * 1].item.splice(itemIndex, 1)
+          for (let index = 0; index < this.selectedList.length; index++) {
+            let i = this.data.body[pageIndex * 1].item.findIndex(ele => ele == this.selectedList[index])
+            if (!(i < 0)) { this.data.body[pageIndex * 1].item.splice(i, 1) }
+          }
+          this.menuPosition.display = 'none'
         },
         onCancel() { },
       });
     },
 
-    //param
-
-
     setselectedItem(type, key) {
       if (!this.selectedItem) { return }
-      switch (type) {
-        case 'style': case 'background':
-          switch (key) {
-            case 'font-size': case '-webkit-text-stroke-width':
-              this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key] + 'px')
-              break
-            case 'letter-spacing':
-            case 'padding': case 'padding-right': case 'padding-top': case 'padding-left': case 'padding-bottom':
-              if (this.selectedTextStyle[type][key] != '0') {
-                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'transform':
-              if (this.cssParams.transformStyle == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformStyle] * 1 != 0) {
-                this.$set(this.selectedItem[type], key, `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
-              } else if (
-                this.cssParams.transformStyle == 'rotate3d' && (this.selectedTextStyle[type][key]['rotate3d'].x * 1 || this.selectedTextStyle[type][key]['rotate3d'].y * 1 || this.selectedTextStyle[type][key]['rotate3d'].z * 1)) {
-                this.$set(this.selectedItem[type], key,
-                  `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `
-                )
-              } else {
-                this.$delete(this.selectedItem[type], key)
-              }
-              break;
-
-            case 'color': case '-webkit-text-stroke-color':
-              if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
-                this.$set(this.selectedItem[type], key, tool.colors2rgba(this.selectedTextStyle[type][key]))
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'writing-mode': case 'text-align': case 'white-space': case 'word-break':
-            case 'font-family': case 'font-weight': case 'line-height': case 'text-shadow':
-              if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            default:
-              break;
-          }
-          break;
-
-        case 'container':
-          switch (key) {
-            case 'background-size': case 'background-position': case 'background-repeat':
-              if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'background-color':
-              if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
-                this.$set(this.selectedItem[type], key, tool.colors2rgba(this.selectedTextStyle[type][key]))
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'background-image':
-              if (this.selectedTextStyle[type][key].value == 'none') {
-                this.$delete(this.selectedItem[type], key)
-                let indexQ = this.selectedItem.quote.findIndex(ele => ele.key.join(',') == 'background,background-image')
-                if (!(indexQ < 0)) { this.$delete(this.selectedItem.quote, indexQ) }
-                this.setData(['selectedTextStyle', 'background', 'background-size'], 'auto')
-                this.setData(['selectedTextStyle', 'background', 'background-position'], '0% 0%')
-                this.setData(['selectedTextStyle', 'background', 'background-repeat'], 'repeat')
-              } else if (this.selectedTextStyle[type][key].value == 'quote') {
-                this.$set(this.selectedItem[type], key, `url(${this.selectedTextStyle[type][key].src})`)
-                // console.log('set after', this.selectedItem[type][key])
-                let indexQ = this.selectedItem.quote.findIndex(ele => ele.key.join(',') == 'background,background-image')
-                if (!(indexQ < 0)) {
-                  this.$set(this.selectedItem.quote, indexQ, {
-                    type: this.selectedTextStyle.background['background-image'].type,
-                    uid: this.selectedTextStyle.background['background-image'].uid,
-                    key: ['background', 'background-image']
-                  })
+      let value
+      try {
+        switch (type) {
+          case 'style': case 'background':
+            switch (key) {
+              case 'font-size': case '-webkit-text-stroke-width':
+                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key] + 'px')
+                this.batchUpdateList([type, key], this.selectedTextStyle[type][key] + 'px')
+                break
+              case 'letter-spacing':
+                if (this.selectedTextStyle[type][key] != 'normal') {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key])
                 } else {
-                  let quote = this.selectedItem.quote.concat(this.getQuoteItem())
-                  this.$set(this.selectedItem, 'quote', quote)
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key], 'delete')
                 }
-              } else if (this.selectedTextStyle[type][key].value == 'url') {
-                this.$set(this.selectedItem[type], key, `url(${this.selectedTextStyle[type][key].src})`)
-                let indexQ = this.selectedItem.quote.findIndex(ele => ele.key.join(',') == 'background,background-image')
-                if (!(indexQ < 0)) { this.$delete(this.selectedItem.quote, indexQ) }
-              }
-              break;
+              case 'padding': case 'padding-right': case 'padding-top': case 'padding-left': case 'padding-bottom':
+                if (this.selectedTextStyle[type][key] != '0') {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key])
+                } else {
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key], 'delete')
+                }
+                break;
+              case 'transform':
+                if (this.cssParams.transformStyle == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformStyle] * 1 != 0) {
+                  this.$set(this.selectedItem[type], key, `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
+                  this.batchUpdateList([type, key], `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
+                } else if (
+                  this.cssParams.transformStyle == 'rotate3d' && (this.selectedTextStyle[type][key]['rotate3d'].x * 1 || this.selectedTextStyle[type][key]['rotate3d'].y * 1 || this.selectedTextStyle[type][key]['rotate3d'].z * 1)) {
+                  this.$set(this.selectedItem[type], key,
+                    `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `
+                  )
+                  this.batchUpdateList([type, key], `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `
+                  )
+                } else {
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key], 'delete')
+                }
+                break;
+              case 'color': case '-webkit-text-stroke-color':
+                if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
+                  value = tool.colors2rgba(this.selectedTextStyle[type][key])
+                  this.$set(this.selectedItem[type], key, value)
+                  this.batchUpdateList([type, key], value)
+                } else {
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], '', 'delete')
+                }
+                break;
+              case 'writing-mode': case 'text-align': case 'white-space': case 'word-break':
+              case 'font-family': case 'font-weight': case 'line-height': case 'text-shadow': case 'font-style':
+                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key])
+                } else { this.$delete(this.selectedItem[type], key); this.batchUpdateList([type, key], '', 'delete') }
+                break;
+              default:
+                break;
+            }
+            break;
 
-            case 'border': case 'border-right': case 'border-top': case 'border-left': case 'border-bottom':
-              if (this.selectedTextStyle[type][key].width) {
-                this.$set(this.selectedItem[type], key, tool.getCss_border(this.selectedTextStyle[type][key]))
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'transform':
-              if (this.cssParams.transformContainer == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformContainer] * 1 != 0) {
-                this.$set(this.selectedItem[type], key, `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
-              } else if (
-                this.cssParams.transformContainer == 'rotate3d' && (this.selectedTextStyle[type][key]['rotate3d'].x * 1 || this.selectedTextStyle[type][key]['rotate3d'].y * 1 || this.selectedTextStyle[type][key]['rotate3d'].z * 1)) {
-                this.$set(this.selectedItem[type], key, `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `)
-              } else {
-                this.$delete(this.selectedItem[type], key)
-              }
-              break;
-            case 'border-radius': case 'border-top-left-radius': case 'border-top-right-radius': case 'border-bottom-right-radius': case 'border-bottom-left-radius':
-              if (this.selectedTextStyle[type][key] != '0') {
-                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            case 'height': case 'width':
-              this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key] + 'px')
-              break;
-
-            case 'overflow':
-              if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
-              } else { this.$delete(this.selectedItem[type], key) }
-              break;
-            default:
-              break;
+          case 'container':
+            switch (key) {
+              case 'background-size': case 'background-position': case 'background-repeat':
+                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key])
+                } else { this.$delete(this.selectedItem[type], key); this.batchUpdateList([type, key], '', 'delete') }
+                break;
+              case 'background-color':
+                if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
+                  value = tool.colors2rgba(this.selectedTextStyle[type][key])
+                  this.$set(this.selectedItem[type], key, value)
+                  this.batchUpdateList([type, key], value)
+                } else { this.$delete(this.selectedItem[type], key); this.batchUpdateList([type, key], '', 'delete') }
+                break;
+              case 'background-image':
+                if (this.selectedTextStyle[type][key].value == 'none') {
+                  this.setBackgroundImage(this.selectedItem, 'delete')
+                  for (let i = 0; i < this.selectedList.length; i++) {
+                    this.setBackgroundImage(this.selectedList[i], 'delete')
+                  }
+                } else if (this.selectedTextStyle[type][key].value == 'quote') {
+                  this.setBackgroundImage(this.selectedItem)
+                  for (let i = 0; i < this.selectedList.length; i++) {
+                    this.setBackgroundImage(this.selectedList[i])
+                  }
+                } else if (this.selectedTextStyle[type][key].value == 'url') {
+                  this.$set(this.selectedItem[type], key, `url(${this.selectedTextStyle[type][key].src})`)
+                  let indexQ = this.selectedItem.quote.findIndex(ele => ele.key.join(',') == 'background,background-image')
+                  if (!(indexQ < 0)) { this.$delete(this.selectedItem.quote, indexQ) }
+                }
+                break;
+              case 'border': case 'border-right': case 'border-top': case 'border-left': case 'border-bottom':
+                if (this.selectedTextStyle[type][key].width) {
+                  value = tool.getCss_border(this.selectedTextStyle[type][key])
+                  this.$set(this.selectedItem[type], key, value)
+                  this.batchUpdateList([type, key], value)
+                } else {
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], '', 'delete')
+                }
+                break;
+              case 'transform':
+                if (this.cssParams.transformContainer == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformContainer] * 1 != 0) {
+                  this.$set(this.selectedItem[type], key, `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
+                  this.batchUpdateList([type, key], `rotate(${this.selectedTextStyle[type][key].rotate}deg) `)
+                } else if (
+                  this.cssParams.transformContainer == 'rotate3d' && (this.selectedTextStyle[type][key]['rotate3d'].x * 1 || this.selectedTextStyle[type][key]['rotate3d'].y * 1 || this.selectedTextStyle[type][key]['rotate3d'].z * 1)) {
+                  this.$set(this.selectedItem[type], key, `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `)
+                  this.batchUpdateList([type, key], `rotate3d(${this.selectedTextStyle[type][key].rotate3d.x},${this.selectedTextStyle[type][key].rotate3d.y},${this.selectedTextStyle[type][key].rotate3d.z},${this.selectedTextStyle[type][key].rotate3d.a}deg) `)
+                } else {
+                  this.$delete(this.selectedItem[type], key)
+                  this.batchUpdateList([type, key], '', 'delete')
+                }
+                break;
+              case 'border-radius': case 'border-top-left-radius': case 'border-top-right-radius': case 'border-bottom-right-radius': case 'border-bottom-left-radius':
+                if (this.selectedTextStyle[type][key] != '0') {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key],)
+                } else { this.$delete(this.selectedItem[type], key); this.batchUpdateList([type, key], '', 'delete') }
+                break;
+              case 'height': case 'width':
+                this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key] + 'px')
+                break;
+              case 'overflow':
+                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
+                  this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+                  this.batchUpdateList([type, key], this.selectedTextStyle[type][key],)
+                } else { this.$delete(this.selectedItem[type], key); this.batchUpdateList([type, key], '', 'delete') }
+                break;
+              default:
+                break;
+            }
+            break;
+          case 'customStyle': case 'customBackground': case 'customContainer':
+            this.$set(this.selectedItem, type, this.selectedTextStyle[type])
+            this.$set(this.selectedItem[type], key, this.selectedTextStyle[type][key])
+            this.batchUpdateList([type], this.selectedTextStyle[type],)
+            this.batchUpdateList([type, key], this.selectedTextStyle[type][key],)
+            break;
+        }
+      } catch (error) {
+        this.$delete(this.selectedItem[type], key)
+      }
+    },
+    setBackgroundImage(item, type = 'set') {
+      switch (type) {
+        case 'set':
+          this.$set(item.container, 'background-image', `url(${this.selectedTextStyle['container']['background-image'].src})`)
+          if (item.quote && Array.isArray(item.quote)) {
+            let qi = item.quote.findIndex(ele => ele.key.join(',') == 'container,background-image')
+            if (!(qi < 0)) {
+              this.$set(item.quote, qi, {
+                type: this.selectedTextStyle.container['background-image'].type,
+                id: this.selectedTextStyle.container['background-image'].id,
+                key: ['container', 'background-image']
+              })
+            } else {
+              let quote = this.getQuoteItem()
+              this.$set(item, 'quote', quote)
+            }
+          } else {
+            this.$set(item, 'quote', this.getQuoteItem())
           }
           break;
-        case 'customStyle': case 'customBackground': case 'customContainer':
-          this.$set(this.selectedItem, type, this.selectedTextStyle[type])
+        case 'delete':
+          this.$delete(item.container, 'background-image')
+          if (item.quote) {
+            let indexQ = item.quote.findIndex(ele => ele.key.join(',') == 'container,background-image')
+            if (!(indexQ < 0)) { this.$delete(item.quote, indexQ) }
+          }
+          this.$delete(item.container, 'background-size')
+          this.$delete(item.container, 'background-position')
+          this.$delete(item.container, 'background-repeat')
+          break
+        default:
           break;
       }
     },
 
-    selectItem(item, index) {
+    batchUpdateList(args = [], data, type = 'set') {
+      for (let index = 0; index < this.selectedList.length; index++) {
+        if (this.selectedList[index].type != 'text') { continue }
+        let item = this.selectedList[index]
+        for (let i = 0; i < args.length - 1; i++) { item = item[args[i]] }
+        switch (type) {
+          case 'set':
+            this.$set(item, args[args.length - 1], data)
+            break;
+          case 'delete':
+            this.$delete(item, args[args.length - 1])
+            break
+        }
+      }
+    },
+    async selectItem(item, index, e) {
+      if (this.basetool || this.selectedItem == item) { return }
       if (item.type == 'text') {
         let style = {
           'style': {},
@@ -1462,6 +2214,7 @@ export default {
           'customContainer': item.customContainer,
         }
         let array = ['style', 'container', 'background']
+
         array.forEach(type => {
           for (const key in default_konjac_css[type]) {
             switch (key) {
@@ -1500,22 +2253,27 @@ export default {
                 style[type][key] = parseInt(item[type][key])
                 break;
               case 'background-image':
-                let urlReg = new RegExp(/url\(.*\)/)
-                if (item[type][key] && urlReg.test(item[type][key])) {
-                  let url = item[type][key].replace(/(^url\()|(\)$)/g, '')
-                  let blobReg = new RegExp(/^blob:/)
-                  if (blobReg.test(url)) {
-                    let el = item.quote.find(ele => ele.key.join(',') == 'background,background-image')
-                    if (el) {
-                      style[type][key] = { value: 'quote', src: url, uid: el.uid, type: el.type }
+                try {
+                  let urlReg = new RegExp(/url\(.*\)/)
+                  if (item[type][key] && urlReg.test(item[type][key])) {
+                    let url = item[type][key].replace(/(^url\()|(\)$)/g, '')
+                    let blobReg = new RegExp(/^blob:/)
+                    if (blobReg.test(url) && item.quote) {
+                      let el = item.quote.find(ele => ele.key.join(',') == 'background,background-image')
+                      if (el) {
+                        style[type][key] = { value: 'quote', src: url, id: el.id, type: el.type }
+                      } else {
+                        style[type][key] = { value: 'quote', src: url, id: '', type: '' }
+                      }
                     } else {
-                      style[type][key] = { value: 'quote', src: url, uid: '', type: '' }
+                      style[type][key] = { value: 'url', src: url, id: '', type: '' }
                     }
                   } else {
-                    style[type][key] = { value: 'url', src: url, uid: '', type: '' }
+                    style[type][key] = { value: 'none', src: '', id: '', type: '' }
                   }
-                } else {
-                  style[type][key] = { value: 'none', src: '', uid: '', type: '' }
+                } catch (error) {
+                  style[type][key] = { value: 'none', url: '', id: '', type: '' }
+                  this.$delete(item[type], key)
                 }
                 break;
               case 'color': case '-webkit-text-stroke-color': case 'background-color':
@@ -1525,7 +2283,7 @@ export default {
                 break;
 
               case 'writing-mode': case 'text-align': case 'white-space': case 'word-break': case 'overflow': case 'font-family': case 'font-weight':
-              case 'background-position': case 'background-size': case 'background-repeat': case 'text-shadow': case 'line-height':
+              case 'background-position': case 'background-size': case 'background-repeat': case 'text-shadow': case 'line-height': case 'font-style':
                 if (item[type][key] && item[type][key] != default_konjac_css[type][key]) {
                   style[type][key] = item[type][key]
                 } else { style[type][key] = default_konjac_css[type][key]; delete item[type][key] }
@@ -1550,47 +2308,61 @@ export default {
             }
           }
         })
+
         this.$set(this, 'selectedTextStyle', style)
+      }
+      if (e && e.shiftKey && this.selectedItem) {
+        if (this.selectIndex.page == index.page) {
+          if (!this.selectedList.includes(this.data.body[this.selectIndex.page].item[this.selectIndex.index])) {
+            this.selectedList.push(this.data.body[this.selectIndex.page].item[this.selectIndex.index])
+          }
+          if (this.selectedList.includes(item)) { this.selectedList.splice(this.selectedList.findIndex(ele => ele == item), 1) }
+        } else {
+          this.selectedList = []
+        }
+      } else {
+        this.selectedList = []
       }
       this.$set(this, 'selectedItem', item)
       this.$set(this, 'selectIndex', index)
     },
-    getTextStyle(type) {
+    getTextStyle(type, textStyle) {
       let style = {}
+      if (!textStyle) { textStyle = this.selectedTextStyle }
       switch (type) {
         case 'style': case 'background':
-          for (const key in this.selectedTextStyle[type]) {
+          for (const key in textStyle[type]) {
             switch (key) {
               case 'font-size': case '-webkit-text-stroke-width':
-                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                  style[key] = this.selectedTextStyle[type][key] + 'px'
+                if (textStyle[type][key] != default_konjac_css[type][key]) {
+                  style[key] = textStyle[type][key] + 'px'
                 }
                 break
               case 'letter-spacing':
               case 'padding': case 'padding-right': case 'padding-top': case 'padding-left': case 'padding-bottom':
-                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                  style[key] = this.selectedTextStyle[type][key]
+                if (textStyle[type][key] != default_konjac_css[type][key]) {
+                  style[key] = textStyle[type][key]
                 }
                 break;
               case 'color': case '-webkit-text-stroke-color':
-                if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
-                  style[key] = tool.colors2rgba(this.selectedTextStyle[type][key])
+                if (tool.colors2rgba(textStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
+                  style[key] = tool.colors2rgba(textStyle[type][key])
                 }
                 break;
 
               case 'writing-mode': case 'text-align': case 'white-space': case 'word-break': case 'font-family': case 'font-weight':
-              case 'text-shadow': case 'line-height':
-                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                  style[key] = this.selectedTextStyle[type][key]
+              case 'text-shadow': case 'line-height': case 'font-style':
+                if (textStyle[type][key] != default_konjac_css[type][key]) {
+                  style[key] = textStyle[type][key]
                 }
                 break;
               case 'transform':
-                if (this.cssParams.transformStyle == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformStyle]) {
-                  style[key] = `rotate(${this.selectedTextStyle[type][key]}deg) `
+                if (this.cssParams.transformStyle == 'rotate' && textStyle[type][key][this.cssParams.transformStyle]) {
+                  style[key] = `rotate(${textStyle[type][key]}deg) `
                 } else if (this.cssParams.transformStyle == 'rotate3d' &&
-                  this.cssParams.transformStyle == 'rotate3d' && this.selectedTextStyle[type][key]['rotate3d'].x && this.selectedTextStyle[type][key]['rotate3d'].y && this.selectedTextStyle[type][key]['rotate3d'].z
+                  this.cssParams.transformStyle == 'rotate3d' && textStyle[type][key]['rotate3d'].x && textStyle[type][key]['rotate3d'].y && textStyle[type][key]['rotate3d'].z
                 ) {
-                  style[key] = `rotate3d(${this.selectedTextStyle[type][key].x},${this.selectedTextStyle[type][key].y},${this.selectedTextStyle[type][key].z},${this.selectedTextStyle[type][key].a}deg) `
+                  style[key] = `rotate3d(${textStyle[type][key].x},${textStyle[type][key].y},${textStyle[type][key].z},${textStyle[type][key].a}deg) `
                 }
                 break;
               default:
@@ -1599,38 +2371,38 @@ export default {
           }
           break;
         case 'container':
-          for (const key in this.selectedTextStyle[type]) {
+          for (const key in textStyle[type]) {
             switch (key) {
               case 'background-position': case 'background-size': case 'background-repeat':
-                if (this.selectedTextStyle[type][key] != default_konjac_css[type][key]) {
-                  style[key] = this.selectedTextStyle[type][key]
+                if (textStyle[type][key] != default_konjac_css[type][key]) {
+                  style[key] = textStyle[type][key]
                 }
                 break;
               case 'height': case 'width':
-                style[key] = this.selectedTextStyle[type][key] + 'px'
+                style[key] = textStyle[type][key] + 'px'
                 break;
               case 'border': case 'border-right': case 'border-top': case 'border-left': case 'border-bottom':
-                if (this.selectedTextStyle[type][key].width) {
-                  style[key] = tool.getCss_border(this.selectedTextStyle[type][key])
+                if (textStyle[type][key].width) {
+                  style[key] = tool.getCss_border(textStyle[type][key])
                 }
                 break;
               case 'background-image':
-                if (this.selectedTextStyle[type][key].value != 'none') {
-                  style[key] = `url(${this.selectedTextStyle[type][key].src})`
+                if (textStyle[type][key].value != 'none') {
+                  style[key] = `url(${textStyle[type][key].src})`
                 }
                 break
               case 'background-color':
-                if (tool.colors2rgba(this.selectedTextStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
-                  style[key] = tool.colors2rgba(this.selectedTextStyle[type][key])
+                if (tool.colors2rgba(textStyle[type][key]) != tool.colors2rgba(default_konjac_css[type][key])) {
+                  style[key] = tool.colors2rgba(textStyle[type][key])
                 }
                 break;
               case 'transform':
-                if (this.cssParams.transformContainer == 'rotate' && this.selectedTextStyle[type][key][this.cssParams.transformContainer]) {
-                  style[key] = `rotate(${this.selectedTextStyle[type][key]}deg) `
+                if (this.cssParams.transformContainer == 'rotate' && textStyle[type][key][this.cssParams.transformContainer]) {
+                  style[key] = `rotate(${textStyle[type][key]}deg) `
                 } else if (this.cssParams.transformContainer == 'rotate3d' &&
-                  this.cssParams.transformContainer == 'rotate3d' && this.selectedTextStyle[type][key]['rotate3d'].x && this.selectedTextStyle[type][key]['rotate3d'].y && this.selectedTextStyle[type][key]['rotate3d'].z
+                  this.cssParams.transformContainer == 'rotate3d' && textStyle[type][key]['rotate3d'].x && textStyle[type][key]['rotate3d'].y && textStyle[type][key]['rotate3d'].z
                 ) {
-                  style[key] = `rotate3d(${this.selectedTextStyle[type][key].x},${this.selectedTextStyle[type][key].y},${this.selectedTextStyle[type][key].z},${this.selectedTextStyle[type][key].a}deg) `
+                  style[key] = `rotate3d(${textStyle[type][key].x},${textStyle[type][key].y},${textStyle[type][key].z},${textStyle[type][key].a}deg) `
                 }
                 break;
               case 'border-radius':
@@ -1638,11 +2410,11 @@ export default {
               case 'border-top-right-radius':
               case 'border-bottom-right-radius':
               case 'border-bottom-left-radius':
-                if (this.selectedTextStyle[type][key] != '0') { style[key] = this.selectedTextStyle[type][key] }
+                if (textStyle[type][key] != '0') { style[key] = textStyle[type][key] }
                 break;
               case 'overflow':
-                if (this.selectedTextStyle[type][key] != 'visible') {
-                  style[key] = this.selectedTextStyle[type][key]
+                if (textStyle[type][key] != 'visible') {
+                  style[key] = textStyle[type][key]
                 }
                 break;
               default:
@@ -1653,45 +2425,85 @@ export default {
       }
       return style
     },
+    showHidden(page, index) {
+      let value = !this.data.body[page].item[index].show
+      this.data.body[page].item[index].show = value
+      for (let index = 0; index < this.selectedList.length; index++) {
+        this.selectedList[index].show = value
+      }
+    },
+    lockElement(page, index) {
+      if (this.data.body[page].item[index].lock) {
+        this.$delete(this.data.body[page].item[index], 'lock')
+        for (let index = 0; index < this.selectedList.length; index++) {
+          const element = this.selectedList[index];
+          this.$delete(element, 'lock')
+        }
+      } else {
+        this.$set(this.data.body[page].item[index], 'lock', true)
+        for (let index = 0; index < this.selectedList.length; index++) {
+          const element = this.selectedList[index];
+          this.$set(element, 'lock', true)
+        }
+      }
+    },
     getQuoteItem() {
       let quote = []
       if (this.selectedTextStyle.container['background-image'].value == 'quote') {
         quote.push({
           type: this.selectedTextStyle.container['background-image'].type,
-          uid: this.selectedTextStyle.container['background-image'].uid,
+          id: this.selectedTextStyle.container['background-image'].id,
           key: ['container', 'background-image']
         })
       }
       return quote
     },
     //缩放元素
-    resizeTextDom(item, xy) {
-      if (this.basetool) { return }
+    resizeTextDom(event, item, xy) {
+      if (this.basetool || item.lock) { return }
+      this.cursor = xy[3]
+      let ele = document.getElementById(`item-${item.id}`).getBoundingClientRect()
+      if (item.type == 'text') { document.getElementById(`textEditor-${item.id}`).style['userSelect'] = 'none' }
+      let x = 0, y = 0, ol = item.left, ot = item.top, ow = ele.width, oh = ele.height
       document.onmousemove = (e) => {
-        if (xy[0] == -1) { item.left += e.movementX / this.zoom }
-        if (xy[1] == -1) { item.top += e.movementY / this.zoom }
-        item.container.width = `${Math.abs(parseInt(item.container.width) + e.movementX / this.zoom * xy[0])}px`;
-        item.container.height = `${Math.abs(parseInt(item.container.height) + e.movementY / this.zoom * xy[1])}px`;
-        this.selectedTextStyle.container.width = parseInt(item.container.width)
-        this.selectedTextStyle.container.height = parseInt(item.container.height)
+        x = x + e.movementX, y = y + e.movementY
+        if (xy[0] == -1) { item.left = ol + x / this.zoom }
+        if (xy[1] == -1) { item.top = ot + y / this.zoom }
+        item.container.width = `${Math.abs(ow + x / this.zoom * xy[0])}px`;
+        item.container.height = `${Math.abs(oh + y / this.zoom * xy[1])}px`;
+        this.selectedTextStyle.container.width = Math.abs(ow + x / this.zoom * xy[0])
+        this.selectedTextStyle.container.height = Math.abs(oh + y / this.zoom * xy[1])
       };
-      document.onmouseup = (e) => { document.onmousemove = null; document.onmouseup = null; };
+      document.onmouseup = (e) => { this.cursor = ''; document.onmousemove = null; document.onmouseup = null; };
     },
     //移动元素
-    moveDom(e, item) {
-      if (this.basetool) { return }
-      if (item.type == 'text' && document.getElementById(`textEditor-${item.uid}`).contentEditable == 'true') { return }
+    moveDom(e, item, index) {
+      if (item.lock || this.basetool) { return }
+      if (this.process.length) { this.process = [] }
+      this.selectItem(item, index, e)
+      if (item.type == 'text' && document.getElementById(`textEditor-${item.id}`).contentEditable == 'true') { return }
+      if (item.type == 'text') { document.getElementById(`textEditor-${item.id}`).style['userSelect'] = 'none' }
+      let x, y
       document.onmousemove = (e) => {
-        item.top += (e.movementY / this.zoom).toFixed(0) * 1;
-        item.left += (e.movementX / this.zoom).toFixed(0) * 1;
+        this.cursor = 'move'
+        x = (e.movementY / this.zoom).toFixed(0) * 1, y = (e.movementX / this.zoom).toFixed(0) * 1;
+        item.top += x, item.left += y
+        for (let index = 0; index < this.selectedList.length; index++) {
+          this.selectedList[index].top += x, this.selectedList[index].left += y
+        }
       };
       document.onmouseup = (e) => {
         document.onmousemove = null;
         document.onmouseup = null;
+        this.cursor = ''
       };
     },
     scrollInto(pageindex) {
-      document.getElementById(`page-${pageindex}`).scrollIntoView({ behavior: 'smooth' });
+      if (this.setting.viewMode == 'scroll') {
+        document.getElementById(`page-${pageindex}`).scrollIntoView({ behavior: 'smooth' })
+      } else {
+        this.pagination(pageindex + 1)
+      }
     },
     async imageOnload(pageindex) {
       let image = document.getElementById(`image-${pageindex}`)
@@ -1777,7 +2589,7 @@ export default {
         ele.item.forEach(item => {
           if (item.quote && item.quote.length) {
             item.quote.forEach(quote => {
-              if (quote.uid == clip.uid && quote.type == 'clip') {
+              if (quote.id == clip.id && quote.type == 'clip') {
                 item["container"]["background-image"] = `url(${clip.src})`
               }
             })
@@ -1799,6 +2611,7 @@ export default {
   color: #2c3e50;
   background-color: #444;
   // margin-top: -20px;
+  user-select: none;
   height: 100%;
   #layout-header {
     height: 45px;
@@ -1813,13 +2626,19 @@ export default {
       width: 100px;
       cursor: pointer;
       z-index: 9999;
+      position: relative;
       ul {
-        width: auto;
+        width: calc(100% + 2px);
         display: none;
+        position: absolute;
         list-style-type: none;
         padding: 0;
+        left: -1px;
         background-color: #fff;
         border-radius: 0 0 10px 10px;
+        border-left: 1px solid #444;
+        border-right: 1px solid #444;
+        border-bottom: 1px solid #444;
       }
       li:hover {
         background-color: rgba(24, 144, 255, 0.1);
@@ -1918,6 +2737,9 @@ export default {
       .thumbnail-item-selected {
         background-color: #4f80ff;
       }
+      .thumbnail-item-selected2 {
+        background-color: #4f81ff83;
+      }
     }
     #workspace-content {
       display: flex;
@@ -1935,7 +2757,21 @@ export default {
         background-color: #2f2f2f;
         display: flex;
         justify-content: space-between;
+        align-items: center;
         line-height: 30px;
+        .pagination {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        > div {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+        }
+        .ant-input-number-focused {
+          border: none;
+        }
       }
     }
     #workspace-sider-right {
@@ -1944,7 +2780,7 @@ export default {
       background-color: #2f2f2f;
       display: flex;
       flex-direction: row;
-      height: 100%;
+      height: auto;
       overflow-y: auto;
       overflow-x: hidden;
       border: 1px solid #444;
@@ -1973,39 +2809,13 @@ export default {
           display: flex;
           flex-direction: row;
           flex-wrap: wrap;
+          justify-content: space-between;
         }
       }
     }
   }
 }
-.param-item {
-  background-color: #444;
-  margin-right: 10px;
-  margin-top: 10px;
-  height: auto;
-  width: 85px;
-  border-radius: 3px;
-  // overflow: hidden;
-  position: relative;
-  > div:nth-child(1) {
-    height: 22px;
-    font-size: 12px;
-    line-height: 22px;
-    padding-left: 5px;
-    color: #ccc;
-  }
-  button {
-    background-color: #444;
-    color: #ccc;
-    border: 1px solid #ccc;
-    margin-left: 5px;
-    width: calc((100% - 10px) / 3);
-    cursor: pointer;
-  }
-}
-.param-item-full {
-  width: 180px;
-}
+
 .param-select {
   cursor: pointer;
 }
@@ -2034,6 +2844,26 @@ export default {
   }
 }
 
+.pageMode {
+  display: flex;
+  flex-direction: row;
+}
+
+.scrollMode {
+  display: flex;
+  flex-direction: column;
+  > .workspace-item {
+    margin-bottom: 10px;
+  }
+}
+
+.workspace-item {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+  margin: auto auto;
+}
+
 #workspace {
   width: 100%;
   margin-bottom: 30px;
@@ -2042,16 +2872,7 @@ export default {
   // overflow: visible;
   position: relative;
   display: flex;
-  flex-direction: column;
-  .workspace-item {
-    position: relative;
-    display: inline-block;
-    // display: block;
-    user-select: none;
-    width: auto;
-    height: auto;
-    margin: 10px auto;
-  }
+
   div.workspace-page {
     position: relative;
     display: inline-block;
@@ -2065,29 +2886,6 @@ export default {
       z-index: 600;
       width: 100%;
       height: 100%;
-    }
-    img.workspace-img {
-      z-index: 500;
-      background: linear-gradient(
-          45deg,
-          rgba(0, 0, 0, 0.0980392) 25%,
-          transparent 25%,
-          transparent 75%,
-          rgba(0, 0, 0, 0.0980392) 75%,
-          rgba(0, 0, 0, 0.0980392) 0
-        ),
-        linear-gradient(
-          45deg,
-          rgba(0, 0, 0, 0.0980392) 25%,
-          transparent 25%,
-          transparent 75%,
-          rgba(0, 0, 0, 0.0980392) 75%,
-          rgba(0, 0, 0, 0.0980392) 0
-        ),
-        white;
-      background-repeat: repeat, repeat;
-      background-position: 0px 0, 20px 20px;
-      background-size: 40px 40px, 40px 40px;
     }
   }
   .body-item {
@@ -2122,7 +2920,10 @@ export default {
     position: absolute;
     background-color: #4f80ff;
   }
-  .body-item:hover {
+  .zindexMax {
+    z-index: 9999 !important;
+  }
+  .item-unlock:hover {
     .konjac_item_container_resize {
       opacity: 1;
     }
@@ -2138,7 +2939,29 @@ export default {
     cursor: move;
   }
 }
-
+img.workspace-img {
+  z-index: 500;
+  background: linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.0980392) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgba(0, 0, 0, 0.0980392) 75%,
+      rgba(0, 0, 0, 0.0980392) 0
+    ),
+    linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.0980392) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgba(0, 0, 0, 0.0980392) 75%,
+      rgba(0, 0, 0, 0.0980392) 0
+    ),
+    white;
+  background-repeat: repeat, repeat;
+  background-position: 0px 0, 20px 20px;
+  background-size: 40px 40px, 40px 40px;
+}
 .scrollbar::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -2161,9 +2984,18 @@ export default {
   border-radius: 10px;
   border: 1px solid #444;
 }
-.scrollbar2::-webkit-scrollbar-track {
+.scrollbar3::-webkit-scrollbar {
+  width: 5px;
+  height: 10px;
+  background-color: #f5f5f5;
+  margin-left: 3px;
+}
+.scrollbar3::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 5px;
+}
+.scrollbar3::-webkit-scrollbar-track {
   border-left: 1px solid #444;
-  // border-right: 1px solid #2f2f2f;
   background-color: #444;
 }
 .tooltip-color-picker {
@@ -2209,11 +3041,13 @@ export default {
   writing-mode: horizontal-tb;
   font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
   text-align: left;
-  font-weight: normal;
+  font-weight: 400;
   line-height: 1.5;
+  font-stretch: normal;
   letter-spacing: normal;
   white-space: normal;
   word-break: break-all;
+  font-style: normal;
   // transform: rotate(90deg) rotate3d(45, 45, 45, "deg");
 }
 
@@ -2245,9 +3079,44 @@ export default {
   border: 1px solid #444;
   height: 35px;
   margin-bottom: 10px;
+  border-radius: 3px;
 }
 .param-button:hover {
   background-color: #444;
+}
+
+.cursormove {
+  cursor: move;
+}
+
+.cursorcrosshair {
+  cursor: crosshair;
+}
+
+.cursorw-resize {
+  cursor: w-resize;
+}
+.cursors-resize {
+  cursor: s-resize;
+}
+.cursorn-resize {
+  cursor: n-resize;
+}
+.cursore-resize {
+  cursor: e-resize;
+}
+
+.cursorne-resize {
+  cursor: ne-resize;
+}
+.cursorsw-resize {
+  cursor: sw-resize;
+}
+.cursorse-resize {
+  cursor: se-resize;
+}
+.cursornw-resize {
+  cursor: nw-resize;
 }
 
 .icon {
@@ -2268,5 +3137,34 @@ export default {
 /* .slide-fade-leave-active for below version 2.1.8 */ {
   transform: translateY(10px);
   opacity: 0;
+}
+
+#contextmenu {
+  position: fixed;
+  padding: 0px;
+  background-color: #fff;
+  border: 1px solid rgba(24, 144, 255, 0.1);
+  border-radius: 5px;
+  width: 120px;
+  z-index: 999;
+  user-select: none;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    cursor: pointer;
+    height: 35px;
+    padding: 0 20px;
+    line-height: 35px;
+    .anticon {
+      margin-right: 3px;
+    }
+  }
+  li:hover {
+    background-color: rgba(24, 144, 255, 0.1);
+  }
 }
 </style>

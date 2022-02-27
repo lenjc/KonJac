@@ -1,7 +1,8 @@
 <template>
   <div :class="`param-item ${full?'param-item-full':''}`" data-type="params">
-    <div>{{title}}</div>
-    <select style="border:none" class="param-select" v-model="data" @change="paramChange(args)" :disabled="disabled">
+    <div>  <input type="checkbox" v-if="checkbox" value="启用" :checked="checked" @click="checked=!checked" @change="paramChange(args,data)" />
+     <span>{{title}}</span> </div>
+    <select style="border:none" class="param-select" v-model="data" @change="paramChange(args,data)" :disabled="disabled">
       <option v-for="(item,index) in options" :key="`${args.join('-')}-${index}`" :value="item.value"
         :disabled="item.disabled?true:false">
         {{item.label}}</option>
@@ -18,10 +19,13 @@ export default {
     selected: String,
     args: Array,
     disabled: { type: Boolean, default: false },
+    checkbox: false,
+    cssstyle: ''
   },
   data() {
     return {
-      data: this.selected
+      data: this.selected,
+       checked: false,
     }
   },
   watch: {
@@ -30,8 +34,12 @@ export default {
     }
   },
   methods: {
-    paramChange(args) {
-      this.$emit('paramChange', args, this.data)
+    paramChange(args,data) {
+      if (this.checkbox) {
+        this.$emit('paramChange', args, data, this.checked)
+      } else {
+        this.$emit('paramChange', args, data)
+      }
     }
   }
 }

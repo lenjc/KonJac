@@ -18,7 +18,8 @@ const ex = {
     getDfromPoint,
     getPointFromPoints,
     transToPoint,
-    utf8Length
+    utf8Length,
+    json2css
 }
 
 module.exports = ex
@@ -482,10 +483,34 @@ const colorMap = {
     lightgreen: { rgba: { r: 144, g: 238, b: 144, a: 1 } }
 }
 
+const symbolCode = {
+    "'": { value: ' ', label: '空格', ascii: '&nbsp;', code: '&#160;' },
+    '<': { value: '<', label: '小于号', ascii: '&lt;', code: '&#60;' },
+    ">": { value: '>', label: '大于号', ascii: '&gt;', code: '&#62;' },
+    "&": { value: '&', label: '和号', ascii: '&amp;', code: '&#38;' },
+    '"': { value: '"', label: '引号', ascii: '&quot;', code: '&#34;' },
+    "'": { value: "'", label: '撇号', ascii: '&apos;', code: '&#39;' },
+    "￠": { value: '￠', label: '分（cent）', ascii: '&cent;', code: '&#162;' },
+    "£": { value: '£', label: '镑（pound）', ascii: '&pound;', code: '&#163;' },
+    "¥": { value: '¥', label: '元（yen）', ascii: '&yen;', code: '&#165;' },
+    "€": { value: '€', label: '欧元（euro）', ascii: '&euro;', code: '&#8364;' },
+    "§": { value: '§', label: '小节', ascii: '&sect;', code: '&#167;' },
+    "©": { value: '©', label: '版权（copyright）', ascii: '&copy;', code: '&#169;' },
+    "®": { value: '®', label: '注册商标', ascii: '&reg;', code: '&#174;' },
+    "™": { value: '™', label: '商标', ascii: '&trade;', code: '&#8482;' },
+    "×": { value: '×', label: '乘号', ascii: '&times;', code: '&#215;' },
+    "÷": { value: '÷', label: '除号', ascii: '&divide;', code: '&#247;' },
+}
+
+function symbolFormat(str) {
+    if (symbolCode[str]) {
+        return symbolCode[str].code
+    } else {
+        return str
+    }
+}
 
 function css2json(str) {
-    console.log('str',str)
-    // if(typeof(str)!='string'){console.log(str)}
     let arr = str.split(';')
     let style = {}
     arr.forEach(ele => {
@@ -500,6 +525,13 @@ function css2json(str) {
     return style
 }
 
+function json2css(obj) {
+    let str = ''
+    for (const key in obj) {
+        str += `${key}:${obj[key]};`
+    }
+    return str
+}
 
 function jsonParse(str) {
     try {
@@ -851,6 +883,7 @@ function getPointFromPath(d) {
 }
 
 function toCamelCase(str) {
+    if (!str.includes('-')) { return str }
     let temp = str.split('-')
     let d = ''
     temp.forEach((ele, index) => {
@@ -1094,16 +1127,16 @@ function rgbHex(red, green, blue, alpha) {
     return ((blue | green << 8 | red << 16) | 1 << 24).toString(16).slice(1) + alpha;
 }
 
-function  utf8Length(val) {
+function utf8Length(val) {
     var str = new String(val);
     var bytesCount = 0;
     for (var i = 0, n = str.length; i < n; i++) {
-      var c = str.charCodeAt(i);
-      if ((c >= 0x0001 && c <= 0x007e) || (0xff60 <= c && c <= 0xff9f)) {
-        bytesCount += 1;
-      } else {
-        bytesCount += 2;
-      }
+        var c = str.charCodeAt(i);
+        if ((c >= 0x0001 && c <= 0x007e) || (0xff60 <= c && c <= 0xff9f)) {
+            bytesCount += 1;
+        } else {
+            bytesCount += 2;
+        }
     }
     return bytesCount;
-  }
+}
