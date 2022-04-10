@@ -103,8 +103,7 @@ export default {
         let tab = await chromeApi.getCurrentTab()
         let list = await chromeApi.getlocal('srcipt_list')
         let host = tab.url.split('/')[2]
-        list = JSON.parse(list)
-        list = list ? list : []
+        list = list ? JSON.parse(list) : []
         let match = list.find(ele => {
           let reg = new RegExp(ele.match);
           return ele.host.includes(host) && reg.test(tab.url)

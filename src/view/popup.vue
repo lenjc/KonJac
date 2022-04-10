@@ -58,8 +58,10 @@ export default {
       let diff = (Date.parse(new Date) - updateTime) / (1000 * 60 * 60)
       if (diff > 24) {
         let list = await chromeApi.getlocal('srcipt_list')
-        this.list = JSON.parse(list)
-        this.refreshScript()
+        if(list){
+          this.list = JSON.parse(list)
+          this.refreshScript()
+        }        
       }
     },
     async refreshScript() {

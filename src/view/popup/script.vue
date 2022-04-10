@@ -69,7 +69,7 @@ export default {
     },
     async getList() {
       let res = await chromeApi.getlocal('srcipt_list')
-      this.list = JSON.parse(res)
+      this.list = res?JSON.parse(res):[]
     }
   }
 }
